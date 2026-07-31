@@ -148,7 +148,7 @@ fn save_note(
             .map_err(error)?;
         }
     }
-    let index = FtsIndex::open_or_create(&config.index_dir()).map_err(error)?;
+    let index = FtsIndex::open_or_create(&config.index_dir_for_vault(&vault)).map_err(error)?;
     index
         .index_note(
             &note.relative_path,
@@ -248,7 +248,7 @@ fn save_inbox_note(
     .map_err(error)?;
     let note = Note::from_path(&path, &vault.path).map_err(error)?;
     let note_title = note.title().to_string();
-    let index = FtsIndex::open_or_create(&config.index_dir()).map_err(error)?;
+    let index = FtsIndex::open_or_create(&config.index_dir_for_vault(&vault)).map_err(error)?;
     index
         .index_note(
             &note.relative_path,
@@ -274,7 +274,7 @@ fn search_notes(
 ) -> Result<Vec<notes::SearchResult>, String> {
     let config = state.config.lock().map_err(error)?;
     let vault = vault(&config, &vault_id)?;
-    let index = FtsIndex::open_or_create(&config.index_dir()).map_err(error)?;
+    let index = FtsIndex::open_or_create(&config.index_dir_for_vault(&vault)).map_err(error)?;
     for node in scan_dir(&vault.path, config.ui.show_hidden)
         .into_iter()
         .filter(|node| !node.is_dir)

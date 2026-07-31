@@ -128,15 +128,19 @@ my-vault/
 ├── projects/       # project-specific notes
 ├── daily/          # daily notes
 ├── attachments/    # files referenced by notes
-└── .noterm/        # disposable local state; exclude from sync
+└── .noterm/        # per-vault search/vector state; exclude from sync
 ```
 
 Noterm creates these folders automatically. Markdown and its YAML frontmatter
-are authoritative; the SQLite search index is local and rebuildable. Start new
-notes in `notes/`, move polished material into `projects/` or `daily/`, and
-review incoming material in `inbox/`.
+are authoritative. Each vault owns a separate `.noterm/fts_index/` full-text
+index and `.noterm/vectors.sqlite` vector database, both local and rebuildable.
+Search and semantic results never cross a vault boundary. Start new notes in
+`notes/`, move polished material into `projects/` or `daily/`, and review
+incoming material in `inbox/`.
 
-To use named vaults in the desktop client, add absolute-path definitions:
+To add a local vault for a subject, client, or personal workspace, create an
+empty folder and add an absolute-path definition in desktop **Settings**. Every
+entry receives the same layout and isolated indexes:
 
 ```toml
 notes_dir = "/home/alex/Notes/personal"

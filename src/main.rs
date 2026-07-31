@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
     config.ensure_vault_layout()?;
 
     // Open SQLite database
-    let db_path = Config::db_path();
+    let db_path = config.db_path();
     let db = db::open(&db_path)?;
 
     // Set up async event channel

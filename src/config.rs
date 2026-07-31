@@ -552,15 +552,25 @@ impl Config {
             .join("noterm")
     }
 
+    /// Full-text state is private to the active legacy vault. Named vaults use
+    /// `index_dir_for_vault`, preventing similarly-named notes from leaking
+    /// into another vault's search results.
     pub fn index_dir(&self) -> PathBuf {
-        self.search
-            .index_dir
-            .clone()
-            .unwrap_or_else(|| Self::data_dir().join("fts_index"))
+        self.notes_dir.join(".noterm").join("fts_index")
     }
 
-    pub fn db_path() -> PathBuf {
-        Self::data_dir().join("noterm.db")
+    /// SQLite embeddings are vault-scoped for the terminal client's active
+    /// vault. They are rebuildable local state and must not be synchronized.
+    pub fn db_path(&self) -> PathBuf {
+        self.notes_dir.join(".noterm").join("vectors.sqlite")
+    }
+
+    pub fn index_dir_for_vault(&self, vault: &VaultConfig) -> PathBuf {
+        vault.path.join(".noterm").join("fts_index")
+    }
+
+    pub fn db_path_for_vault(&self, vault: &VaultConfig) -> PathBuf {
+        vault.path.join(".noterm").join("vectors.sqlite")
     }
 
     pub fn log_path() -> PathBuf {
@@ -635,5 +645,28 @@ mod tests {
         assert!(dir.join("inbox").is_dir());
         assert!(dir.join(".noterm").is_dir());
         std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn vault_indexes_are_isolated() {
+        let config = Config::default();
+        let alpha = VaultConfig {
+            id: "alpha".into(),
+            name: "Alpha".into(),
+            path: PathBuf::from("/tmp/alpha"),
+        };
+        let beta = VaultConfig {
+            id: "beta".into(),
+            name: "Beta".into(),
+            path: PathBuf::from("/tmp/beta"),
+        };
+        assert_ne!(
+            config.index_dir_for_vault(&alpha),
+            config.index_dir_for_vault(&beta)
+        );
+        assert_ne!(
+            config.db_path_for_vault(&alpha),
+            config.db_path_for_vault(&beta)
+        );
     }
 }
