@@ -111,6 +111,7 @@ The TUI opens with a file tree on the left and a note viewer/editor on the right
 | `j` / `k` | Navigate the file tree |
 | `Enter` | Open a note |
 | `n` | Create a new note |
+| `N` | Create a new collection (physical directory) |
 | `e` | Edit the open note |
 | `d` | Delete the selected note or directory (confirmation required) |
 | `Esc` | Save and return to Normal |
@@ -151,6 +152,20 @@ id = "personal"
 name = "Personal"
 path = "/home/alex/Notes/personal"
 ```
+
+In the TUI, press `S`, navigate to **Local vaults**, and press `Enter` to edit
+the same definitions as JSON. `Esc` or `Ctrl+s` validates and saves the list:
+
+```json
+[
+  { "id": "personal", "name": "Personal", "path": "/home/alex/Notes/personal" },
+  { "id": "work", "name": "Work", "path": "/home/alex/Notes/work" }
+]
+```
+
+Create a physical collection directory with `N` in the TUI, or **New
+collection** in the desktop app. It is created under the selected folder in the
+vault (or `notes/` when nothing is selected).
 
 ---
 

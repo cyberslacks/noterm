@@ -48,7 +48,9 @@ pub fn render(f: &mut Frame, state: &mut AppState) {
         Mode::VectorSearch => vector_search::render(f, area, state),
         Mode::Git => git_panel::render(f, area, state),
         Mode::Help => help_popup::render(f, area, state),
-        Mode::NewNote | Mode::GitCommitInput => render_prompt_overlay(f, area, state),
+        Mode::NewNote | Mode::NewCollection | Mode::GitCommitInput => {
+            render_prompt_overlay(f, area, state)
+        }
         Mode::ConfirmDelete => confirm_delete::render(f, area, state),
         Mode::MeetilyImport => meetily_panel::render(f, area, state),
         Mode::Settings => settings_panel::render(f, area, state),
@@ -111,6 +113,7 @@ fn render_prompt_overlay(f: &mut Frame, area: ratatui::layout::Rect, state: &App
 
     let title = match state.mode {
         Mode::NewNote => " New Note Name (Enter to create, Esc to cancel) ",
+        Mode::NewCollection => " New Collection Name (Enter to create, Esc to cancel) ",
         Mode::GitCommitInput => " Commit Message (Enter to commit, Esc to cancel) ",
         _ => " Input ",
     };

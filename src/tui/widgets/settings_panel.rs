@@ -32,7 +32,8 @@ pub const FIELD_SUMMARIZER_MODEL: usize = 13;
 pub const FIELD_SUMMARIZER_PROMPT: usize = 14;
 pub const FIELD_GIT_USERNAME: usize = 15;
 pub const FIELD_GIT_TOKEN: usize = 16;
-pub const TOTAL_FIELDS: usize = 17;
+pub const FIELD_VAULTS: usize = 17;
+pub const TOTAL_FIELDS: usize = 18;
 
 pub fn is_model_field(field: usize) -> bool {
     matches!(
@@ -167,6 +168,8 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
     // Prompt editor overlays the settings panel when active.
     if state.settings_mode == SettingsMode::EditingLongText {
         render_prompt_editor(f, area, state);
+    } else if state.settings_mode == SettingsMode::EditingVaults {
+        render_vaults_editor(f, area, state);
     }
 }
 
@@ -331,6 +334,18 @@ fn render_settings_list(f: &mut Frame, area: Rect, state: &AppState) {
             field_idx: Some(FIELD_GIT_TOKEN),
             is_header: false,
         },
+        Row {
+            label: "── Vaults ───────────────────────".into(),
+            value: String::new(),
+            field_idx: None,
+            is_header: true,
+        },
+        Row {
+            label: "  Local vaults".into(),
+            value: format!("{} configured [Enter=edit JSON]", state.config.vaults.len()),
+            field_idx: Some(FIELD_VAULTS),
+            is_header: false,
+        },
     ];
 
     let items: Vec<ListItem> = rows
@@ -465,6 +480,19 @@ fn render_prompt_editor(f: &mut Frame, area: Rect, state: &AppState) {
     let inner = block.inner(popup);
     f.render_widget(block, popup);
     f.render_widget(&state.settings_prompt_editor, inner);
+}
+
+fn render_vaults_editor(f: &mut Frame, area: Rect, state: &AppState) {
+    let popup = centered_rect(90, 90, area);
+    f.render_widget(ratatui::widgets::Clear, popup);
+    let block = Block::default()
+        .title(" Local Vaults JSON  (Esc save+close · Ctrl+s save) ")
+        .borders(Borders::ALL)
+        .border_type(BorderType::Double)
+        .border_style(Style::default().fg(Color::Yellow));
+    let inner = block.inner(popup);
+    f.render_widget(block, popup);
+    f.render_widget(&state.settings_vaults_editor, inner);
 }
 
 fn truncate_prompt(prompt: &str) -> String {

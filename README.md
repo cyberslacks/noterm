@@ -112,6 +112,7 @@ noterm
 | `j` / `k` | Navigate file tree |
 | `Enter` | Open note |
 | `n` | New note |
+| `N` | New collection (directory) |
 | `e` | Edit mode |
 | `Esc` | Save and return to normal |
 | `q` | Quit |

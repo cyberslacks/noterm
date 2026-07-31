@@ -21,6 +21,7 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         Mode::Git => ("GIT", Color::LightRed),
         Mode::Help => ("HELP", Color::White),
         Mode::NewNote => ("NEW NOTE", Color::Yellow),
+        Mode::NewCollection => ("NEW COLLECTION", Color::Yellow),
         Mode::GitCommitInput => ("COMMIT", Color::Yellow),
         Mode::ConfirmDelete => ("DELETE?", Color::Red),
         Mode::MeetilyImport => ("MEETILY", Color::Cyan),

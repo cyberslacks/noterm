@@ -35,6 +35,7 @@ async fn handle_key(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         Mode::Git => handle_git(state, key),
         Mode::Help => handle_help(state, key),
         Mode::NewNote => handle_new_note(state, key),
+        Mode::NewCollection => handle_new_collection(state, key),
         Mode::GitCommitInput => handle_git_commit_input(state, key),
         Mode::ConfirmDelete => handle_confirm_delete(state, key).await,
         Mode::MeetilyImport => handle_meetily(state, key).await,
@@ -62,6 +63,10 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         KeyCode::Char('n') => {
             state.prompt_input.clear();
             state.enter_mode(Mode::NewNote);
+        }
+        KeyCode::Char('N') => {
+            state.prompt_input.clear();
+            state.enter_mode(Mode::NewCollection);
         }
         KeyCode::Char('d') => {
             // The vault root is never a tree node, so any selected file or
@@ -886,6 +891,72 @@ fn handle_new_note(state: &mut AppState, key: KeyEvent) -> Result<Action> {
     Ok(Action::Continue)
 }
 
+fn handle_new_collection(state: &mut AppState, key: KeyEvent) -> Result<Action> {
+    match key.code {
+        KeyCode::Esc => {
+            state.prompt_input.clear();
+            state.return_to_previous();
+        }
+        KeyCode::Enter => {
+            let name = state.prompt_input.drain(..).collect::<String>();
+            let name = name.trim();
+            let valid_name = std::path::Path::new(name)
+                .components()
+                .next()
+                .is_some_and(|component| matches!(component, std::path::Component::Normal(_)))
+                && !name.contains(std::path::MAIN_SEPARATOR);
+            if !valid_name {
+                state.set_status(
+                    "Collection name must be a single folder name".into(),
+                    crate::app::StatusLevel::Error,
+                );
+                return Ok(Action::Continue);
+            }
+            let target_dir = state
+                .selected_file_node()
+                .map(|node| {
+                    if node.is_dir {
+                        node.path.clone()
+                    } else {
+                        node.path.parent().unwrap_or(&state.notes_dir).to_path_buf()
+                    }
+                })
+                .unwrap_or_else(|| state.notes_dir.join("notes"));
+            let path = target_dir.join(name);
+            if path.exists() {
+                state.set_status(
+                    "That collection already exists".into(),
+                    crate::app::StatusLevel::Warning,
+                );
+                return Ok(Action::Continue);
+            }
+            std::fs::create_dir_all(&path)?;
+            let notes_dir = state.notes_dir.clone();
+            let show_hidden = state.config.ui.show_hidden;
+            let tx = state.tx.clone();
+            tokio::spawn(async move {
+                let nodes = tokio::task::spawn_blocking(move || {
+                    crate::notes::watcher::scan_dir(&notes_dir, show_hidden)
+                })
+                .await
+                .unwrap_or_default();
+                tx.send(AppEvent::FileTreeRefresh(nodes)).ok();
+            });
+            state.set_status(
+                format!("Created collection: {}", path.display()),
+                crate::app::StatusLevel::Success,
+            );
+            state.mode = Mode::Normal;
+        }
+        KeyCode::Char(character) => state.prompt_input.push(character),
+        KeyCode::Backspace => {
+            state.prompt_input.pop();
+        }
+        _ => {}
+    }
+    Ok(Action::Continue)
+}
+
 fn handle_git_commit_input(state: &mut AppState, key: KeyEvent) -> Result<Action> {
     match key.code {
         KeyCode::Esc => {
@@ -1320,6 +1391,7 @@ fn handle_settings(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         SettingsMode::EditingText => handle_settings_edit(state, key),
         SettingsMode::PickingModel => handle_settings_pick(state, key),
         SettingsMode::EditingLongText => handle_settings_edit_long(state, key),
+        SettingsMode::EditingVaults => handle_settings_edit_vaults(state, key),
     }
 }
 
@@ -1364,6 +1436,12 @@ fn handle_settings_nav(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                     .collect();
                 state.settings_prompt_editor = ratatui_textarea::TextArea::new(lines);
                 state.settings_mode = SettingsMode::EditingLongText;
+            } else if state.settings_cursor == sp::FIELD_VAULTS {
+                let json = serde_json::to_string_pretty(&state.config.vaults)
+                    .unwrap_or_else(|_| "[]".into());
+                state.settings_vaults_editor =
+                    ratatui_textarea::TextArea::new(json.lines().map(String::from).collect());
+                state.settings_mode = SettingsMode::EditingVaults;
             } else {
                 // Text edit mode: populate edit buf with current raw value
                 state.settings_edit_buf = sp::get_field_raw(state, state.settings_cursor);
@@ -1475,6 +1553,58 @@ fn handle_settings_edit_long(state: &mut AppState, key: KeyEvent) -> Result<Acti
                     .input(crossterm::event::Event::Key(key));
             }
         }
+    }
+    Ok(Action::Continue)
+}
+
+fn save_vault_definitions(state: &mut AppState) {
+    let raw = state.settings_vaults_editor.lines().join("\n");
+    match serde_json::from_str::<Vec<crate::config::VaultConfig>>(&raw) {
+        Ok(vaults) => {
+            if vaults
+                .iter()
+                .any(|vault| vault.id.trim().is_empty() || vault.name.trim().is_empty())
+            {
+                state.set_status(
+                    "Each vault needs a non-empty id and name".into(),
+                    crate::app::StatusLevel::Error,
+                );
+                return;
+            }
+            state.config.vaults = vaults;
+            if let Err(error) = state.config.ensure_vault_layout() {
+                state.set_status(
+                    format!("Could not create vault layout: {error}"),
+                    crate::app::StatusLevel::Error,
+                );
+                return;
+            }
+            state.config.write().ok();
+            state.set_status(
+                "Vault definitions saved".into(),
+                crate::app::StatusLevel::Success,
+            );
+            state.settings_mode = SettingsMode::Navigating;
+        }
+        Err(error) => state.set_status(
+            format!("Vault JSON error: {error}"),
+            crate::app::StatusLevel::Error,
+        ),
+    }
+}
+
+fn handle_settings_edit_vaults(state: &mut AppState, key: KeyEvent) -> Result<Action> {
+    if key.code == KeyCode::Esc
+        || (key
+            .modifiers
+            .contains(crossterm::event::KeyModifiers::CONTROL)
+            && key.code == KeyCode::Char('s'))
+    {
+        save_vault_definitions(state);
+    } else {
+        state
+            .settings_vaults_editor
+            .input(crossterm::event::Event::Key(key));
     }
     Ok(Action::Continue)
 }

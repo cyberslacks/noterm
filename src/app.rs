@@ -156,6 +156,7 @@ pub enum Mode {
     Git,
     Help,
     NewNote,         // inline prompt for new note name
+    NewCollection,   // inline prompt for a physical vault directory
     GitCommitInput,  // inline commit message prompt
     ConfirmDelete,   // confirmation overlay before deleting a note
     MeetilyImport,   // Meetily meeting browser overlay
@@ -172,6 +173,7 @@ pub enum SettingsMode {
     EditingText,
     PickingModel,
     EditingLongText, // full-screen textarea for multi-line fields (e.g. system prompt)
+    EditingVaults,   // full-screen JSON editor for local vault definitions
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -385,6 +387,7 @@ pub struct AppState {
     pub available_ollama_models: Vec<String>,
     pub available_openai_models: Vec<String>,
     pub settings_prompt_editor: TextArea<'static>,
+    pub settings_vaults_editor: TextArea<'static>,
 
     // Summarize panel
     pub summarize_loading: bool,
@@ -453,6 +456,7 @@ impl AppState {
             available_ollama_models: Vec::new(),
             available_openai_models: Vec::new(),
             settings_prompt_editor: TextArea::default(),
+            settings_vaults_editor: TextArea::default(),
             summarize_loading: false,
             summarize_buf: String::new(),
             summarize_scroll: 0,

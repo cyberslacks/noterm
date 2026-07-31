@@ -215,6 +215,26 @@ fn create_note(
     })
 }
 
+#[tauri::command]
+fn create_collection(
+    vault_id: String,
+    name: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<String, String> {
+    let config = state.config.lock().map_err(error)?;
+    let vault = vault(&config, &vault_id)?;
+    let name = noterm::import::sanitize_filename(&name);
+    if name.is_empty() || name == "." || name == ".." {
+        return Err("A collection name is required".into());
+    }
+    let path = vault.path.join("notes").join(name);
+    if path.exists() {
+        return Err("That collection already exists".into());
+    }
+    std::fs::create_dir_all(&path).map_err(error)?;
+    Ok(path.to_string_lossy().to_string())
+}
+
 /// Store reviewed external output as a regular vault note rather than hiding it
 /// in an integration-specific database. Fabric uses this for a durable inbox.
 #[tauri::command]
@@ -438,6 +458,7 @@ fn main() {
             save_note,
             publish_note,
             create_note,
+            create_collection,
             save_inbox_note,
             search_notes,
             get_config,
