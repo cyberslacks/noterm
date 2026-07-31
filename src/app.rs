@@ -564,9 +564,10 @@ impl AppState {
             }
 
             AppEvent::NoteDeleted(path) => {
-                // If we deleted the currently open note, clear the editor
+                // Clear the editor when its note, or the directory containing
+                // it, was removed.
                 if let Some(ref note) = self.current_note {
-                    if note.path == path {
+                    if note.path == path || note.path.starts_with(&path) {
                         self.current_note = None;
                         self.editor = ratatui_textarea::TextArea::default();
                         self.is_modified = false;

@@ -14,7 +14,7 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
     f.render_widget(ratatui::widgets::Clear, popup);
 
     let block = Block::default()
-        .title(" Delete Note ")
+        .title(" Delete from Vault ")
         .borders(Borders::ALL)
         .border_type(BorderType::Double)
         .border_style(Style::default().fg(Color::Red));
@@ -37,8 +37,16 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         .map(|n| n.name.clone())
         .unwrap_or_else(|| "?".into());
 
+    let is_dir = state
+        .selected_file_node()
+        .map(|node| node.is_dir)
+        .unwrap_or(false);
     let file_line = Line::from(vec![
-        Span::raw("  Delete: "),
+        Span::raw(if is_dir {
+            "  Delete directory and all contents: "
+        } else {
+            "  Delete note: "
+        }),
         Span::styled(
             filename,
             Style::default()

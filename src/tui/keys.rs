@@ -64,12 +64,9 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
             state.enter_mode(Mode::NewNote);
         }
         KeyCode::Char('d') => {
-            // Only delete files, not directories
-            if state
-                .selected_file_node()
-                .map(|n| !n.is_dir)
-                .unwrap_or(false)
-            {
+            // The vault root is never a tree node, so any selected file or
+            // directory is an explicitly chosen, confirmed deletion target.
+            if state.selected_file_node().is_some() {
                 state.enter_mode(Mode::ConfirmDelete);
             }
         }
@@ -1250,46 +1247,62 @@ async fn handle_confirm_delete(state: &mut AppState, key: KeyEvent) -> Result<Ac
     match key.code {
         KeyCode::Char('y') | KeyCode::Char('Y') => {
             if let Some(node) = state.selected_file_node().cloned() {
-                if !node.is_dir {
-                    let path = node.path.clone();
-                    let notes_dir = state.notes_dir.clone();
-                    let tx = state.tx.clone();
-                    let show_hidden = state.config.ui.show_hidden;
-                    let index_dir = state.config.index_dir();
+                let path = node.path.clone();
+                let is_dir = node.is_dir;
+                let notes_dir = state.notes_dir.clone();
+                let tx = state.tx.clone();
+                let show_hidden = state.config.ui.show_hidden;
+                let index_dir = state.config.index_dir();
 
-                    tokio::spawn(async move {
-                        if let Err(e) = std::fs::remove_file(&path) {
-                            tx.send(AppEvent::Error(format!("Delete failed: {e}"))).ok();
-                            return;
-                        }
+                tokio::spawn(async move {
+                    // Collect indexed Markdown paths before recursive removal.
+                    let indexed_paths = if is_dir {
+                        crate::notes::watcher::scan_dir(&path, true)
+                            .into_iter()
+                            .filter(|entry| !entry.is_dir)
+                            .map(|entry| entry.path)
+                            .collect()
+                    } else {
+                        vec![path.clone()]
+                    };
 
-                        tx.send(AppEvent::NoteDeleted(path.clone())).ok();
+                    let delete_result = if is_dir {
+                        std::fs::remove_dir_all(&path)
+                    } else {
+                        std::fs::remove_file(&path)
+                    };
+                    if let Err(e) = delete_result {
+                        tx.send(AppEvent::Error(format!("Delete failed: {e}"))).ok();
+                        return;
+                    }
 
-                        // Remove from FTS index
-                        let rel = path
-                            .strip_prefix(&notes_dir)
-                            .unwrap_or(&path)
-                            .to_string_lossy()
-                            .to_string();
-                        tokio::task::spawn_blocking(move || {
-                            if let Ok(idx) =
-                                crate::search::fulltext::FtsIndex::open_or_create(&index_dir)
-                            {
+                    tx.send(AppEvent::NoteDeleted(path.clone())).ok();
+
+                    let index_notes_dir = notes_dir.clone();
+                    tokio::task::spawn_blocking(move || {
+                        if let Ok(idx) =
+                            crate::search::fulltext::FtsIndex::open_or_create(&index_dir)
+                        {
+                            for indexed_path in indexed_paths {
+                                let rel = indexed_path
+                                    .strip_prefix(&index_notes_dir)
+                                    .unwrap_or(&indexed_path)
+                                    .to_string_lossy()
+                                    .to_string();
                                 idx.delete_note(&rel).ok();
                             }
-                        })
-                        .await
-                        .ok();
+                        }
+                    })
+                    .await
+                    .ok();
 
-                        // Refresh file tree
-                        let nodes = tokio::task::spawn_blocking(move || {
-                            crate::notes::watcher::scan_dir(&notes_dir, show_hidden)
-                        })
-                        .await
-                        .unwrap_or_default();
-                        tx.send(AppEvent::FileTreeRefresh(nodes)).ok();
-                    });
-                }
+                    let nodes = tokio::task::spawn_blocking(move || {
+                        crate::notes::watcher::scan_dir(&notes_dir, show_hidden)
+                    })
+                    .await
+                    .unwrap_or_default();
+                    tx.send(AppEvent::FileTreeRefresh(nodes)).ok();
+                });
             }
             state.mode = Mode::Normal;
         }

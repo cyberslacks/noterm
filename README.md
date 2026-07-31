@@ -129,7 +129,7 @@ Press `?` at any time to see the full key binding reference.
 | `Enter` | Open file / expand directory |
 | `e` | Edit current note |
 | `n` | New note (prompts for name) |
-| `d` | Delete selected note (confirmation required) |
+| `d` | Delete selected note or directory (confirmation required) |
 | `/` | Full-text search |
 | `v` | Vector / semantic search |
 | `c` | Toggle LLM chat panel |

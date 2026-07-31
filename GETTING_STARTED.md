@@ -112,6 +112,7 @@ The TUI opens with a file tree on the left and a note viewer/editor on the right
 | `Enter` | Open a note |
 | `n` | Create a new note |
 | `e` | Edit the open note |
+| `d` | Delete the selected note or directory (confirmation required) |
 | `Esc` | Save and return to Normal |
 | `q` | Quit |
 | `?` | Full key binding reference |
