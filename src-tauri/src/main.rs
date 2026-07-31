@@ -13,6 +13,7 @@ use serde::Serialize;
 use serde_json::Value;
 use std::{
     path::{Component, Path, PathBuf},
+    process::Command,
     sync::Mutex,
 };
 
@@ -233,6 +234,58 @@ fn create_collection(
     }
     std::fs::create_dir_all(&path).map_err(error)?;
     Ok(path.to_string_lossy().to_string())
+}
+
+fn vault_path_for_command(
+    vault_id: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<PathBuf, String> {
+    let config = state.config.lock().map_err(error)?;
+    let vault = vault(&config, &vault_id)?;
+    if !vault.path.is_dir() {
+        return Err(format!("Vault path does not exist: {}", vault.path.display()));
+    }
+    Ok(vault.path)
+}
+
+#[tauri::command]
+fn open_vault_folder(
+    vault_id: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<(), String> {
+    let path = vault_path_for_command(vault_id, state)?;
+    #[cfg(target_os = "windows")]
+    let mut command = Command::new("explorer");
+    #[cfg(target_os = "macos")]
+    let mut command = Command::new("open");
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let mut command = Command::new("xdg-open");
+    command.arg(&path).spawn().map_err(error)?;
+    Ok(())
+}
+
+#[tauri::command]
+fn open_vault_terminal(
+    vault_id: String,
+    state: tauri::State<'_, DesktopState>,
+) -> Result<(), String> {
+    let path = vault_path_for_command(vault_id, state)?;
+    #[cfg(target_os = "windows")]
+    let result = Command::new("cmd")
+        .args(["/C", "start", "cmd", "/K", "cd", "/d"])
+        .arg(&path)
+        .spawn();
+    #[cfg(target_os = "macos")]
+    let result = Command::new("open").args(["-a", "Terminal"]).arg(&path).spawn();
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let result = Command::new("x-terminal-emulator")
+        .arg("--working-directory")
+        .arg(&path)
+        .spawn()
+        .or_else(|_| Command::new("gnome-terminal").arg("--working-directory").arg(&path).spawn())
+        .or_else(|_| Command::new("konsole").arg("--workdir").arg(&path).spawn());
+    result.map_err(|error| format!("Could not open a terminal for this vault: {error}"))?;
+    Ok(())
 }
 
 /// Store reviewed external output as a regular vault note rather than hiding it
@@ -459,6 +512,8 @@ fn main() {
             publish_note,
             create_note,
             create_collection,
+            open_vault_folder,
+            open_vault_terminal,
             save_inbox_note,
             search_notes,
             get_config,
