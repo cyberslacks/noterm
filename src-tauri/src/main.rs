@@ -412,15 +412,15 @@ fn sync_vault(
         "pull" => SyncDirection::Pull,
         _ => return Err("Sync direction must be `push` or `pull`".into()),
     };
-    match config.sync.provider {
+    let sync = vault.sync.clone().unwrap_or_else(|| config.sync.clone());
+    let git = vault.git.clone().unwrap_or_else(|| config.git.clone());
+    match sync.provider {
         noterm::config::SyncProvider::Git => {
-            let remote = config
-                .git
+            let remote = git
                 .remote
                 .as_deref()
                 .ok_or("set git.remote in configuration before syncing")?;
-            let branch = config
-                .git
+            let branch = git
                 .branch
                 .as_deref()
                 .ok_or("set git.branch in configuration before syncing")?;
@@ -429,20 +429,20 @@ fn sync_vault(
                     &vault.path,
                     remote,
                     branch,
-                    config.git.git_username,
-                    config.git.git_token,
+                    git.git_username,
+                    git.git_token,
                 ),
                 SyncDirection::Pull => noterm::git::operations::pull(
                     &vault.path,
                     remote,
                     branch,
-                    config.git.git_username,
-                    config.git.git_token,
+                    git.git_username,
+                    git.git_token,
                 ),
             }
             .map_err(error)
         }
-        _ => noterm::sync::sync_cloud_vault(&config.sync, &vault.path, direction).map_err(error),
+        _ => noterm::sync::sync_cloud_vault(&sync, &vault.path, direction).map_err(error),
     }
 }
 

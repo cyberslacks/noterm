@@ -43,6 +43,14 @@ pub struct VaultConfig {
     pub id: String,
     pub name: String,
     pub path: PathBuf,
+    /// Repository credentials and branch for this vault. Falls back to the
+    /// legacy root `[git]` configuration only for existing single-vault users.
+    #[serde(default)]
+    pub git: Option<GitConfig>,
+    /// Sync provider for this vault; cloud remotes must never be shared by
+    /// unrelated vaults.
+    #[serde(default)]
+    pub sync: Option<SyncConfig>,
 }
 
 /// Filesystem sync settings. Git keeps using the existing `[git]` settings;
@@ -585,6 +593,8 @@ impl Config {
                 id: "default".into(),
                 name: "Default".into(),
                 path: self.notes_dir.clone(),
+                git: None,
+                sync: None,
             }]
         } else {
             self.vaults.clone()
@@ -631,6 +641,8 @@ mod tests {
             id: "work".into(),
             name: "Work".into(),
             path: PathBuf::from("/tmp/work-vault"),
+            git: None,
+            sync: None,
         }];
         assert_eq!(config.resolved_vaults()[0].id, "work");
     }
@@ -654,11 +666,15 @@ mod tests {
             id: "alpha".into(),
             name: "Alpha".into(),
             path: PathBuf::from("/tmp/alpha"),
+            git: None,
+            sync: None,
         };
         let beta = VaultConfig {
             id: "beta".into(),
             name: "Beta".into(),
             path: PathBuf::from("/tmp/beta"),
+            git: None,
+            sync: None,
         };
         assert_ne!(
             config.index_dir_for_vault(&alpha),

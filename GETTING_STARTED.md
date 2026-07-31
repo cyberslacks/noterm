@@ -151,6 +151,10 @@ notes_dir = "/home/alex/Notes/personal"
 id = "personal"
 name = "Personal"
 path = "/home/alex/Notes/personal"
+
+[vaults.git]
+remote = "origin"
+branch = "main"
 ```
 
 In the TUI, press `S`, navigate to **Local vaults**, and press `Enter` to edit
