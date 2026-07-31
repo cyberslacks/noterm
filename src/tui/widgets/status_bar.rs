@@ -30,6 +30,7 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         Mode::FreshnessView => ("FRESHNESS", Color::Yellow),
         Mode::AnnotationPanel => ("ANNOTATE", Color::Yellow),
         Mode::KazamKbBrowser => ("KAZAM KB", Color::Cyan),
+        Mode::VaultPicker => ("VAULTS", Color::Cyan),
     };
 
     // Compute freshness badge for the open note (if it has review_every)

@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
 
     // Open SQLite database
     let db_path = config.db_path();
-    let db = db::open(&db_path)?;
+    let mut db = db::open(&db_path)?;
 
     // Set up async event channel
     let (tx, mut rx) = mpsc::unbounded_channel::<AppEvent>();
@@ -315,6 +315,19 @@ async fn main() -> Result<()> {
                         }
                         tx2.send(AppEvent::IndexingComplete).ok();
                     });
+                } else if let AppEvent::VaultSelected(vault) = event {
+                    let vector_db = app.config.db_path_for_vault(&vault);
+                    match db::open(&vector_db) {
+                        Ok(next_db) => {
+                            db = next_db;
+                            app.notes_dir = vault.path.clone();
+                            app.config.notes_dir = vault.path;
+                            app.current_note = None;
+                            app.file_tree = notes::watcher::scan_dir(&app.notes_dir, app.config.ui.show_hidden);
+                            app.set_status(format!("Switched to vault: {}", vault.name), app::StatusLevel::Success);
+                        }
+                        Err(error) => app.set_status(format!("Could not open vault: {error}"), app::StatusLevel::Error),
+                    }
                 } else {
                     app.handle_app_event(event);
                 }

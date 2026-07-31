@@ -44,6 +44,7 @@ async fn handle_key(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         Mode::FreshnessView => handle_freshness(state, key).await,
         Mode::AnnotationPanel => handle_annotations(state, key).await,
         Mode::KazamKbBrowser => handle_kazam_kb(state, key).await,
+        Mode::VaultPicker => handle_vault_picker(state, key),
     }
 }
 
@@ -153,6 +154,10 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                     .unwrap_or_default();
                 tx.send(AppEvent::ModelsLoaded { ollama, openai }).ok();
             });
+        }
+        KeyCode::Char('V') => {
+            state.prompt_input.clear();
+            state.enter_mode(Mode::VaultPicker);
         }
         KeyCode::Char('I') => {
             state.enter_mode(Mode::MeetilyImport);
@@ -364,6 +369,34 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         }
         KeyCode::PageUp => {
             state.viewer_scroll = state.viewer_scroll.saturating_sub(10);
+        }
+        _ => {}
+    }
+    Ok(Action::Continue)
+}
+
+fn handle_vault_picker(state: &mut AppState, key: KeyEvent) -> Result<Action> {
+    let vaults = state.config.resolved_vaults();
+    let current = vaults
+        .iter()
+        .position(|vault| vault.path == state.notes_dir)
+        .unwrap_or(0);
+    let selected = state.prompt_input.parse::<usize>().unwrap_or(current);
+    match key.code {
+        KeyCode::Esc => state.mode = Mode::Normal,
+        KeyCode::Char('j') | KeyCode::Down => {
+            state.prompt_input = (selected + 1)
+                .min(vaults.len().saturating_sub(1))
+                .to_string()
+        }
+        KeyCode::Char('k') | KeyCode::Up => {
+            state.prompt_input = selected.saturating_sub(1).to_string()
+        }
+        KeyCode::Enter => {
+            if let Some(vault) = vaults.get(selected).cloned() {
+                state.tx.send(AppEvent::VaultSelected(vault)).ok();
+                state.mode = Mode::Normal;
+            }
         }
         _ => {}
     }

@@ -165,6 +165,7 @@ pub enum Mode {
     FreshnessView,   // Kazam-style staleness dashboard overlay
     AnnotationPanel, // sidecar annotation viewer/composer
     KazamKbBrowser,  // Kazam KB page browser/importer
+    VaultPicker,     // runtime local-vault selector
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -228,6 +229,7 @@ pub enum AppEvent {
         openai: Vec<String>,
     },
     ForceReembed,
+    VaultSelected(crate::config::VaultConfig),
     SummaryChunk(String),
     SummaryDone,
     SummaryError(String),
@@ -714,6 +716,10 @@ impl AppState {
 
             AppEvent::ForceReembed => {
                 // handled in main event loop before reaching here
+            }
+
+            AppEvent::VaultSelected(_) => {
+                // handled in main event loop so it can swap the vector database
             }
 
             AppEvent::SummaryChunk(token) => {

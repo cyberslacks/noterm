@@ -48,7 +48,7 @@ pub fn render(f: &mut Frame, state: &mut AppState) {
         Mode::VectorSearch => vector_search::render(f, area, state),
         Mode::Git => git_panel::render(f, area, state),
         Mode::Help => help_popup::render(f, area, state),
-        Mode::NewNote | Mode::NewCollection | Mode::GitCommitInput => {
+        Mode::NewNote | Mode::NewCollection | Mode::GitCommitInput | Mode::VaultPicker => {
             render_prompt_overlay(f, area, state)
         }
         Mode::ConfirmDelete => confirm_delete::render(f, area, state),
@@ -114,6 +114,7 @@ fn render_prompt_overlay(f: &mut Frame, area: ratatui::layout::Rect, state: &App
     let title = match state.mode {
         Mode::NewNote => " New Note Name (Enter to create, Esc to cancel) ",
         Mode::NewCollection => " New Collection Name (Enter to create, Esc to cancel) ",
+        Mode::VaultPicker => " Switch Vault (j/k select · Enter confirm · Esc cancel) ",
         Mode::GitCommitInput => " Commit Message (Enter to commit, Esc to cancel) ",
         _ => " Input ",
     };
@@ -127,9 +128,31 @@ fn render_prompt_overlay(f: &mut Frame, area: ratatui::layout::Rect, state: &App
     let inner = block.inner(popup);
     f.render_widget(block, popup);
 
+    let input = if state.mode == Mode::VaultPicker {
+        let vaults = state.config.resolved_vaults();
+        let current = vaults
+            .iter()
+            .position(|vault| vault.path == state.notes_dir)
+            .unwrap_or(0);
+        let selected = state.prompt_input.parse::<usize>().unwrap_or(current);
+        vaults
+            .get(selected)
+            .map(|vault| {
+                format!(
+                    "[{}/{}] {} — {}",
+                    selected + 1,
+                    vaults.len(),
+                    vault.name,
+                    vault.path.display()
+                )
+            })
+            .unwrap_or_else(|| "No vaults configured".into())
+    } else {
+        state.prompt_input.clone()
+    };
     let input_line = Line::from(vec![
         Span::raw("  "),
-        Span::raw(state.prompt_input.clone()),
+        Span::raw(input),
         Span::styled("█", Style::default().fg(Color::Yellow)),
     ]);
     f.render_widget(Paragraph::new(input_line), inner);
