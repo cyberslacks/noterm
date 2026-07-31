@@ -1,6 +1,8 @@
 # Getting Started with noterm
 
-noterm is a single binary with no system dependencies. Download, make executable, and run.
+noterm is a cross-platform Markdown workspace. Your vault is a normal folder of
+files; Noterm indexes it locally, while Kazam renders selected notes as a
+knowledge base and Fabric helps create reviewed drafts.
 
 ---
 
@@ -98,8 +100,9 @@ noterm
 
 On first run noterm will:
 
-1. Create `~/notes/` (your notes directory)
-2. Write a default config at `~/.config/noterm/config.toml`
+1. Create `~/notes/` (your default vault) and its standard folders.
+2. Write a default config in the platform configuration directory (for example,
+   `~/.config/noterm/config.toml` on Linux).
 
 The TUI opens with a file tree on the left and a note viewer/editor on the right.
 
@@ -112,6 +115,37 @@ The TUI opens with a file tree on the left and a note viewer/editor on the right
 | `Esc` | Save and return to Normal |
 | `q` | Quit |
 | `?` | Full key binding reference |
+
+## Vault-first methodology
+
+The vault is the durable system of record. Keep authored Markdown in this
+portable structure; sync this folder, not a database.
+
+```text
+my-vault/
+├── inbox/          # files waiting for automatic import
+├── notes/          # general notes; Fabric drafts land in notes/inbox/
+├── projects/       # project-specific notes
+├── daily/          # daily notes
+├── attachments/    # files referenced by notes
+└── .noterm/        # disposable local state; exclude from sync
+```
+
+Noterm creates these folders automatically. Markdown and its YAML frontmatter
+are authoritative; the SQLite search index is local and rebuildable. Start new
+notes in `notes/`, move polished material into `projects/` or `daily/`, and
+review incoming material in `inbox/`.
+
+To use named vaults in the desktop client, add absolute-path definitions:
+
+```toml
+notes_dir = "/home/alex/Notes/personal"
+
+[[vaults]]
+id = "personal"
+name = "Personal"
+path = "/home/alex/Notes/personal"
+```
 
 ---
 
@@ -197,7 +231,9 @@ default_review_every = "30d"
 
 ## Sidecar annotations (optional)
 
-Add non-destructive annotations to any note without editing its content. Annotations are Kazam-compatible YAML files stored alongside your notes in `.annotations/<note-slug>/`.
+Add non-destructive annotations to any note without editing its content. They
+are Kazam-compatible YAML sidecars stored in
+`.kazam/annotations/<note-slug>/` within the vault.
 
 Press `A` in Normal mode (with a note open) to open the annotations panel:
 
@@ -213,53 +249,118 @@ The status bar shows `A:<n>` when the open note has pending annotations.
 
 ---
 
-## Kazam integration (optional)
+## Kazam knowledge base (optional)
 
-noterm integrates with [Kazam](https://github.com/tdiderich/kazam), a local AI-native knowledge base engine. All Kazam features require `kazam.kb_path` to be set in `config.toml`:
+[Kazam](https://github.com/tdiderich/kazam) is the viewer and publishing layer,
+not a replacement for the Noterm vault. Publish reviewed notes from the vault
+to a separate Kazam project; Kazam provides the rendered site, freshness checks,
+annotations, and its MCP server.
+
+```bash
+cargo install kazam                    # or: brew install tdiderich/tap/kazam
+kazam init "$HOME/Documents/noterm-kb"
+cd "$HOME/Documents/noterm-kb"
+kazam dev .                            # viewer at http://localhost:3000
+```
+
+Point Noterm at the project with an absolute path (TOML paths do not expand
+`~`):
 
 ```toml
 [kazam]
-kb_path = "~/Documents/my-kb"    # path to your Kazam KB directory
-import_folder = "kazam"          # subfolder in notes_dir for imported pages
-binary_path = "kazam"            # path to the kazam binary (for MCP)
+kb_path = "/home/alex/Documents/noterm-kb"
+import_folder = "kazam"
+binary_path = "kazam"
 ```
 
-### KB Browser (`B`)
+Use `E` in the TUI or **Publish** in the desktop app to write a
+Kazam-compatible YAML page. Add `publish: true` to a note’s frontmatter to
+republish automatically on save:
 
-Browse and import Kazam KB pages directly into noterm — no Kazam install required, reads YAML files directly.
+```yaml
+---
+title: "Deployment runbook"
+publish: true
+owner: "platform@example.com"
+review_every: 30d
+sources_of_truth:
+  - label: "Production guide"
+    href: "https://example.com/runbook"
+---
+```
 
-Press `B` to open the browser. Type to filter by title, `Enter` to import a page as a markdown note (or open it if already imported), `Esc` to close.
+Press `B` to browse/import existing Kazam YAML pages. Press `M` to connect to
+the local `kazam mcp` server; Noterm starts it in `kb_path`. In Noterm chat,
+`Tab` toggles Kazam page context. Kazam’s own `kazam mcp` command also exposes
+the knowledge base to other MCP-capable tools.
 
-### Export to Kazam (`E`)
+## Fabric drafting (optional)
 
-Press `E` to export the open note as a Kazam-compatible YAML page written to `<kb_path>/<slug>.yaml`. Kazam picks it up automatically when it rebuilds its static site.
+[Fabric](https://github.com/danielmiessler/fabric) runs reusable AI patterns
+against a note. It never silently replaces vault content: run a pattern, review
+the output, then append/replace the note or save it as a new `notes/inbox/`
+draft in the desktop app.
 
-### MCP connection (`M`)
+```bash
+go install github.com/danielmiessler/fabric/cmd/fabric@latest
+fabric --setup
+fabric --listpatterns
+```
 
-Press `M` to toggle a live connection to `kazam mcp --kb <kb_path>`. When connected, noterm can use Kazam's MCP tools for agent operations. Requires the `kazam` binary on your PATH (or set `binary_path`).
+On macOS/Linux, Fabric’s official installer is also available; on Windows use
+`winget install danielmiessler.Fabric`. Ensure `fabric` is on `PATH`, then set:
 
-### Chat KB context (`Tab` in chat)
+```toml
+[integrations.fabric]
+enabled = true
+binary_path = "fabric"
+```
 
-While in the chat panel, press `Tab` to inject all Kazam KB pages into the chat system prompt. The panel border turns cyan and shows `[KB:ON]`. Press `Tab` again to clear the context.
+Open a note and choose **Fabric** in the desktop app, select a pattern, and
+review the result before applying it. Recommended flow: source material →
+Fabric pattern → reviewed `notes/inbox/` draft → edited Markdown note →
+optional Kazam publish.
 
 ---
 
-## Git sync (optional)
+## Sync the vault (optional)
 
-To sync notes across machines, point `notes_dir` at a git repository and noterm will show live status in the title bar. Use `G` to open the git panel and stage, commit, and push without leaving the TUI.
+Git is the preferred sync mechanism. Initialize the vault as a repository and
+exclude `.noterm/`; the TUI’s `G` panel and desktop **Pull**/**Push** controls
+operate on the configured remote and branch.
 
 ```bash
-cd ~/notes
+cd "$HOME/notes"
 git init
+printf '.noterm/\n' >> .gitignore
 git remote add origin https://github.com/yourname/notes.git
+git add . && git commit -m "Create notes vault"
 ```
+
+```toml
+[git]
+remote = "origin"
+branch = "main"
+```
+
+Google Drive and OneDrive work through an existing [rclone](https://rclone.org/)
+remote. Configure and test it with `rclone config`, then select it in Noterm:
+
+```toml
+[sync]
+provider = "google_drive" # or "one_drive"
+rclone_remote = "gdrive:noterm"
+```
+
+Noterm calls `rclone sync` and excludes `.noterm/`. Choose one primary sync
+method per vault to avoid concurrent Git and cloud conflict resolution.
 
 ---
 
 ## Change the notes directory
 
-Edit `~/.config/noterm/config.toml`:
+Edit the Noterm configuration file (or use the desktop **Settings** panel):
 
 ```toml
-notes_dir = "~/Documents/notes"
+notes_dir = "/home/alex/Documents/notes"
 ```
