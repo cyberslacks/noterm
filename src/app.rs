@@ -811,6 +811,7 @@ impl AppState {
         if let Some(note) = &mut self.current_note {
             let content = self.editor.lines().join("\n");
             note.body = content.clone();
+            note.frontmatter.modified = Some(chrono::Utc::now().to_rfc3339());
             note.raw = crate::notes::frontmatter::serialize(&note.frontmatter, &content);
             std::fs::write(&note.path, &note.raw)?;
             self.is_modified = false;

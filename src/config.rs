@@ -34,6 +34,8 @@ pub struct Config {
     pub vaults: Vec<VaultConfig>,
     #[serde(default)]
     pub integrations: IntegrationConfig,
+    #[serde(default)]
+    pub sync: SyncConfig,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -41,6 +43,25 @@ pub struct VaultConfig {
     pub id: String,
     pub name: String,
     pub path: PathBuf,
+}
+
+/// Filesystem sync settings. Git keeps using the existing `[git]` settings;
+/// cloud providers delegate file transfer to a user-configured rclone remote.
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct SyncConfig {
+    #[serde(default)]
+    pub provider: SyncProvider,
+    #[serde(default)]
+    pub rclone_remote: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default, PartialEq)]
+#[serde(rename_all = "snake_case")]
+pub enum SyncProvider {
+    #[default]
+    Git,
+    GoogleDrive,
+    OneDrive,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -485,6 +506,7 @@ impl Default for Config {
             kazam: KazamConfig::default(),
             vaults: Vec::new(),
             integrations: IntegrationConfig::default(),
+            sync: SyncConfig::default(),
         }
     }
 }
@@ -558,6 +580,25 @@ impl Config {
             self.vaults.clone()
         }
     }
+
+    /// Create the portable Noterm vault layout. Markdown remains the source of
+    /// truth; `.noterm` is reserved for local, rebuildable state and should be
+    /// excluded from file-sync providers.
+    pub fn ensure_vault_layout(&self) -> Result<()> {
+        for vault in self.resolved_vaults() {
+            for folder in [
+                "inbox",
+                "notes",
+                "projects",
+                "daily",
+                "attachments",
+                ".noterm",
+            ] {
+                std::fs::create_dir_all(vault.path.join(folder))?;
+            }
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -582,5 +623,17 @@ mod tests {
             path: PathBuf::from("/tmp/work-vault"),
         }];
         assert_eq!(config.resolved_vaults()[0].id, "work");
+    }
+
+    #[test]
+    fn standard_vault_layout_is_created() {
+        let dir = std::env::temp_dir().join(format!("noterm-vault-{}", uuid::Uuid::new_v4()));
+        let mut config = Config::default();
+        config.notes_dir = dir.clone();
+        config.ensure_vault_layout().unwrap();
+        assert!(dir.join("notes").is_dir());
+        assert!(dir.join("inbox").is_dir());
+        assert!(dir.join(".noterm").is_dir());
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

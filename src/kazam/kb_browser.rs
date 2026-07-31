@@ -15,7 +15,10 @@ use std::path::{Path, PathBuf};
 
 use serde::Deserialize;
 
-use crate::notes::freshness::{self, FreshnessStatus};
+use crate::notes::{
+    freshness::{self, FreshnessStatus},
+    frontmatter::SourceOfTruth,
+};
 
 // Minimal deserialization of a Kazam page YAML file.
 #[derive(Debug, Deserialize, Default)]
@@ -38,6 +41,17 @@ struct KazamFreshnessYaml {
     expires: Option<String>,
     #[serde(default)]
     updated: Option<String>,
+    #[serde(default)]
+    owner: Option<String>,
+    #[serde(default)]
+    sources_of_truth: Vec<KazamSourceOfTruth>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum KazamSourceOfTruth {
+    Url(String),
+    Labeled { label: String, href: String },
 }
 
 #[derive(Debug, Deserialize)]
@@ -117,7 +131,9 @@ pub fn scan_kb(kb_path: &Path, notes_dir: &Path, import_folder: &str) -> Vec<Kaz
             path,
             slug,
             title,
-            owner: page_yaml.owner,
+            owner: page_yaml
+                .owner
+                .or_else(|| page_yaml.freshness.as_ref().and_then(|f| f.owner.clone())),
             review_every,
             freshness_status,
             already_imported,
@@ -177,6 +193,23 @@ pub fn import_page(
     if let Some(f) = &page_yaml.freshness {
         if let Some(exp) = &f.expires {
             fm_lines.push(format!("expires: \"{exp}\""));
+        }
+        if !f.sources_of_truth.is_empty() {
+            fm_lines.push("sources_of_truth:".to_string());
+            for source in &f.sources_of_truth {
+                let source = match source {
+                    KazamSourceOfTruth::Url(href) => SourceOfTruth {
+                        label: href.clone(),
+                        href: href.clone(),
+                    },
+                    KazamSourceOfTruth::Labeled { label, href } => SourceOfTruth {
+                        label: label.clone(),
+                        href: href.clone(),
+                    },
+                };
+                fm_lines.push(format!("  - label: \"{}\"", source.label.replace('"', "'")));
+                fm_lines.push(format!("    href: \"{}\"", source.href.replace('"', "'")));
+            }
         }
     }
     fm_lines.push("---".to_string());

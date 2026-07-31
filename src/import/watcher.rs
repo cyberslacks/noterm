@@ -57,7 +57,7 @@ async fn sweep_inbox(
                 continue;
             }
 
-            match super::process_inbox_file(&path, &notes_dir, Some("imported")) {
+            match super::process_inbox_file(&path, &notes_dir, Some("notes/inbox")) {
                 Ok(dest) => {
                     tx2.send(AppEvent::NoteImported(dest.clone())).ok();
                     // Refresh file tree

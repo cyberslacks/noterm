@@ -484,6 +484,37 @@ fn index_current_note(state: &AppState) {
                 })
                 .ok();
         }
+
+        if note.frontmatter.publish {
+            if let Some(kb_path) = state.config.kazam.kb_path.clone() {
+                let note_path = note.path.clone();
+                let body = note.body.clone();
+                let frontmatter = note.frontmatter.clone();
+                let tx = state.tx.clone();
+                tokio::spawn(async move {
+                    let result = tokio::task::spawn_blocking(move || {
+                        crate::export::kazam::export_note(
+                            &note_path,
+                            &body,
+                            &frontmatter,
+                            std::path::Path::new(&kb_path),
+                        )
+                    })
+                    .await;
+                    match result {
+                        Ok(Ok(path)) => {
+                            tx.send(AppEvent::KazamExportDone(path)).ok();
+                        }
+                        Ok(Err(error)) => {
+                            tx.send(AppEvent::KazamExportError(error.to_string())).ok();
+                        }
+                        Err(error) => {
+                            tx.send(AppEvent::KazamExportError(error.to_string())).ok();
+                        }
+                    }
+                });
+            }
+        }
     }
 }
 
@@ -815,7 +846,7 @@ fn handle_new_note(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                                 .unwrap_or_else(|| state.notes_dir.clone())
                         }
                     })
-                    .unwrap_or_else(|| state.notes_dir.clone());
+                    .unwrap_or_else(|| state.notes_dir.join("notes"));
                 let path = target_dir.join(&filename);
                 if !path.exists() {
                     let id = uuid::Uuid::new_v4().to_string();

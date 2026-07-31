@@ -5,9 +5,9 @@
 use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Cadences shorter than this skip the "due soon" warning — they go straight
-/// from Fresh to Overdue. Prevents short-cadence notes from permanently showing yellow.
-pub const DUE_SOON_CADENCE_THRESHOLD: i64 = 30;
+/// Kazam's current warning window: a note is due soon during the seven days
+/// before its review deadline, regardless of cadence length.
+pub const DUE_SOON_DAYS: i64 = 7;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FreshnessStatus {
@@ -46,7 +46,7 @@ impl FreshnessInfo {
             FreshnessStatus::Overdue {
                 days_overdue: -days_until_due,
             }
-        } else if cadence > DUE_SOON_CADENCE_THRESHOLD && days_until_due <= cadence / 4 {
+        } else if days_until_due <= DUE_SOON_DAYS {
             FreshnessStatus::DueSoon { days_until_due }
         } else {
             FreshnessStatus::Fresh

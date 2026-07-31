@@ -77,6 +77,19 @@ The desktop application uses the same Rust services and configuration as the
 terminal client. It provides multi-vault Markdown editing with source/preview
 views and native configuration, MCP, and Fabric bridges.
 
+Each vault is a portable Markdown folder. On startup Noterm creates
+`inbox/`, `notes/`, `projects/`, `daily/`, `attachments/`, and `.noterm/`;
+the Markdown files are the source of truth and SQLite is a rebuildable local
+search index. Set `publish: true` in a note's front matter to publish it to a
+configured Kazam knowledge base when saved. Fabric output can be reviewed and
+saved as a normal `notes/inbox/` note.
+
+Git is the default sync method. Configure `[git] remote` and `branch`, then
+use Pull/Push in the desktop app (or the TUI Git panel). For Google Drive or
+OneDrive, set `[sync] provider = "google_drive"` or `"one_drive"` and an
+`rclone_remote` such as `gdrive:noterm`; Noterm calls `rclone sync` and
+excludes `.noterm/` local state.
+
 ```bash
 cd desktop && npm install && cd ..
 cargo run --manifest-path src-tauri/Cargo.toml

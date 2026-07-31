@@ -3,11 +3,12 @@
 /// Output format:
 ///   title: <note title>
 ///   shell: document
-///   owner: <frontmatter.owner>
 ///   freshness:
 ///     review_every: <frontmatter.review_every>
 ///     expires: <frontmatter.expires>
 ///     updated: <frontmatter.modified as YYYY-MM-DD>
+///     owner: <frontmatter.owner>
+///     sources_of_truth: <frontmatter.sources_of_truth>
 ///   components:
 ///     - type: markdown
 ///       body: |
@@ -30,10 +31,6 @@ pub fn note_to_kazam_yaml(note_path: &Path, body: &str, frontmatter: &NoteFrontm
         "shell: document".to_string(),
     ];
 
-    if let Some(owner) = &frontmatter.owner {
-        lines.push(format!("owner: \"{}\"", owner.replace('"', "'")));
-    }
-
     // Freshness block (only if review_every is set)
     if frontmatter.review_every.is_some()
         || frontmatter.expires.is_some()
@@ -51,6 +48,21 @@ pub fn note_to_kazam_yaml(note_path: &Path, body: &str, frontmatter: &NoteFrontm
                 "  updated: \"{}\"",
                 &modified[..10.min(modified.len())]
             ));
+        }
+        if let Some(owner) = &frontmatter.owner {
+            lines.push(format!("  owner: \"{}\"", owner.replace('"', "'")));
+        }
+        if let Some(sources) = &frontmatter.sources_of_truth {
+            if !sources.is_empty() {
+                lines.push("  sources_of_truth:".to_string());
+                for source in sources {
+                    lines.push(format!(
+                        "    - label: \"{}\"",
+                        source.label.replace('"', "'")
+                    ));
+                    lines.push(format!("      href: \"{}\"", source.href.replace('"', "'")));
+                }
+            }
         }
     }
 
@@ -86,4 +98,36 @@ pub fn export_note(
     let yaml = note_to_kazam_yaml(note_path, body, frontmatter);
     std::fs::write(&dest, yaml)?;
     Ok(dest)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::notes::frontmatter::SourceOfTruth;
+
+    #[test]
+    fn exports_current_kazam_freshness_metadata() {
+        let frontmatter = NoteFrontmatter {
+            title: Some("Operations".into()),
+            owner: Some("ops@example.com".into()),
+            review_every: Some("90d".into()),
+            modified: Some("2026-07-31T12:00:00Z".into()),
+            sources_of_truth: Some(vec![SourceOfTruth {
+                label: "Runbook".into(),
+                href: "https://example.test/runbook".into(),
+            }]),
+            ..Default::default()
+        };
+
+        let yaml = note_to_kazam_yaml(Path::new("operations.md"), "# Operations", &frontmatter);
+        let value: serde_yaml::Value = serde_yaml::from_str(&yaml).unwrap();
+        assert_eq!(
+            value["freshness"]["owner"].as_str(),
+            Some("ops@example.com")
+        );
+        assert_eq!(
+            value["freshness"]["sources_of_truth"][0]["href"].as_str(),
+            Some("https://example.test/runbook")
+        );
+    }
 }

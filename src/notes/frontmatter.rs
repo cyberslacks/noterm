@@ -17,6 +17,9 @@ pub struct NoteFrontmatter {
     pub tags: Option<Vec<String>>,
     pub tasks: Option<Vec<Task>>,
     pub status: Option<String>,
+    /// Explicit opt-in for publishing this Markdown note to the Kazam KB.
+    #[serde(default)]
+    pub publish: bool,
     // Freshness / review metadata (Kazam-compatible)
     pub owner: Option<String>,
     pub review_every: Option<String>,

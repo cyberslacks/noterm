@@ -57,14 +57,25 @@ pub fn note_slug(path: &Path) -> String {
         .replace(' ', "-")
 }
 
-/// `.annotations/<slug>/` directory relative to `notes_dir`.
+/// Kazam-compatible `.kazam/annotations/<slug>/` directory relative to the
+/// notes directory. Existing `.annotations/` files remain readable as a
+/// migration fallback in `load_annotations`.
 pub fn annotations_dir(notes_dir: &Path, slug: &str) -> PathBuf {
+    notes_dir.join(".kazam").join("annotations").join(slug)
+}
+
+fn legacy_annotations_dir(notes_dir: &Path, slug: &str) -> PathBuf {
     notes_dir.join(".annotations").join(slug)
 }
 
 /// Load all annotation YAML files for a given slug, sorted pending-first.
 pub fn load_annotations(notes_dir: &Path, slug: &str) -> Vec<Annotation> {
     let dir = annotations_dir(notes_dir, slug);
+    let dir = if dir.exists() {
+        dir
+    } else {
+        legacy_annotations_dir(notes_dir, slug)
+    };
     let Ok(entries) = std::fs::read_dir(&dir) else {
         return Vec::new();
     };
@@ -151,6 +162,37 @@ pub fn count_pending(notes_dir: &Path, slug: &str) -> usize {
         .count()
 }
 
+/// Kazam's annotation review status: pending annotations become due soon in
+/// seven days and overdue after fourteen. Resolved annotations are fresh.
+pub fn annotation_freshness(
+    annotation: &Annotation,
+    today: &str,
+) -> crate::notes::freshness::FreshnessStatus {
+    use crate::notes::freshness::{parse_iso_date, FreshnessStatus};
+    if matches!(
+        annotation.status,
+        AnnotationStatus::Incorporated | AnnotationStatus::Ignored
+    ) {
+        return FreshnessStatus::Fresh;
+    }
+    let Some(added) = parse_iso_date(&annotation.added) else {
+        return FreshnessStatus::Fresh;
+    };
+    let Some(today) = parse_iso_date(today) else {
+        return FreshnessStatus::Fresh;
+    };
+    let days_until_due = 14 - (today - added);
+    if days_until_due < 0 {
+        FreshnessStatus::Overdue {
+            days_overdue: -days_until_due,
+        }
+    } else if days_until_due <= 7 {
+        FreshnessStatus::DueSoon { days_until_due }
+    } else {
+        FreshnessStatus::Fresh
+    }
+}
+
 /// Generate a new annotation ID: `ann-YYYY-MM-DD-XXXX`.
 pub fn new_annotation_id() -> String {
     let today = crate::notes::freshness::today_iso();
@@ -181,5 +223,26 @@ mod tests {
         let id = new_annotation_id();
         assert!(id.starts_with("ann-"), "id should start with 'ann-': {id}");
         assert!(id.len() >= 18, "id too short: {id}");
+    }
+
+    #[test]
+    fn pending_annotations_follow_kazam_decay_window() {
+        let annotation = Annotation {
+            id: "ann-test".into(),
+            text: "Review this".into(),
+            author: String::new(),
+            section: String::new(),
+            added: "2026-01-01".into(),
+            status: AnnotationStatus::Pending,
+            source: AnnotationSource::Cli,
+        };
+        assert!(matches!(
+            annotation_freshness(&annotation, "2026-01-09"),
+            crate::notes::freshness::FreshnessStatus::DueSoon { .. }
+        ));
+        assert!(matches!(
+            annotation_freshness(&annotation, "2026-01-16"),
+            crate::notes::freshness::FreshnessStatus::Overdue { .. }
+        ));
     }
 }

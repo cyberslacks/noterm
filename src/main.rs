@@ -23,8 +23,8 @@ async fn main() -> Result<()> {
     // Load config first (creates default if missing)
     let config = Config::load()?;
 
-    // Ensure notes directory exists
-    std::fs::create_dir_all(&config.notes_dir)?;
+    // Ensure the standard portable Markdown-vault layout exists.
+    config.ensure_vault_layout()?;
 
     // Open SQLite database
     let db_path = Config::db_path();
