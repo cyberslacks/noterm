@@ -2,6 +2,7 @@ use anyhow::Result;
 use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use futures::StreamExt;
 use std::path::PathBuf;
+use std::process::Command;
 use tokio::sync::mpsc::UnboundedSender;
 
 use crate::app::{AppEvent, AppState, Mode, SettingsMode};
@@ -89,6 +90,20 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         KeyCode::Char('c') => {
             state.enter_mode(Mode::Chat);
         }
+        KeyCode::Char('o') => match open_vault_folder(&state.notes_dir) {
+            Ok(()) => state.set_status(
+                "Opened vault folder".into(),
+                crate::app::StatusLevel::Success,
+            ),
+            Err(error) => state.set_status(error, crate::app::StatusLevel::Error),
+        },
+        KeyCode::Char('t') => match open_vault_terminal(&state.notes_dir) {
+            Ok(()) => state.set_status(
+                "Opened terminal in vault".into(),
+                crate::app::StatusLevel::Success,
+            ),
+            Err(error) => state.set_status(error, crate::app::StatusLevel::Error),
+        },
         KeyCode::Char('K') => {
             // Load tasks from the current note's frontmatter
             let tasks = state
@@ -1640,4 +1655,63 @@ fn handle_settings_edit_vaults(state: &mut AppState, key: KeyEvent) -> Result<Ac
             .input(crossterm::event::Event::Key(key));
     }
     Ok(Action::Continue)
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn open_vault_folder(path: &std::path::Path) -> std::result::Result<(), String> {
+    Command::new("xdg-open")
+        .arg(path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+#[cfg(all(unix, not(target_os = "macos")))]
+fn open_vault_terminal(path: &std::path::Path) -> std::result::Result<(), String> {
+    Command::new("x-terminal-emulator")
+        .arg("--working-directory")
+        .arg(path)
+        .spawn()
+        .or_else(|_| {
+            Command::new("gnome-terminal")
+                .arg("--working-directory")
+                .arg(path)
+                .spawn()
+        })
+        .or_else(|_| Command::new("konsole").arg("--workdir").arg(path).spawn())
+        .map(|_| ())
+        .map_err(|e| format!("Could not open a terminal: {e}"))
+}
+#[cfg(target_os = "macos")]
+fn open_vault_folder(path: &std::path::Path) -> std::result::Result<(), String> {
+    Command::new("open")
+        .arg(path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+#[cfg(target_os = "macos")]
+fn open_vault_terminal(path: &std::path::Path) -> std::result::Result<(), String> {
+    Command::new("open")
+        .args(["-a", "Terminal"])
+        .arg(path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+#[cfg(target_os = "windows")]
+fn open_vault_folder(path: &std::path::Path) -> std::result::Result<(), String> {
+    Command::new("explorer")
+        .arg(path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+#[cfg(target_os = "windows")]
+fn open_vault_terminal(path: &std::path::Path) -> std::result::Result<(), String> {
+    Command::new("cmd")
+        .args(["/C", "start", "cmd", "/K", "cd", "/d"])
+        .arg(path)
+        .spawn()
+        .map(|_| ())
+        .map_err(|e| e.to_string())
 }
