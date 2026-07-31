@@ -1,17 +1,3 @@
-mod app;
-mod config;
-mod db;
-mod error;
-mod export;
-mod git;
-mod import;
-mod kazam;
-mod llm;
-mod notes;
-mod search;
-mod tasks;
-mod tui;
-
 use anyhow::Result;
 use crossterm::event::EventStream;
 use futures::StreamExt;
@@ -19,8 +5,11 @@ use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time;
 
-use app::{AppEvent, AppState, Mode};
-use config::Config;
+use noterm::{
+    app::{self, AppEvent, AppState, Mode},
+    config::{self, Config},
+    db, import, llm, notes, search, tui,
+};
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -70,13 +59,14 @@ async fn main() -> Result<()> {
         let tx2 = tx.clone();
         tokio::spawn(async move {
             tokio::task::spawn_blocking(move || {
-                let idx = crate::search::fulltext::FtsIndex::open_or_create(&index_dir)?;
+                let idx = search::fulltext::FtsIndex::open_or_create(&index_dir)?;
                 let nodes = notes::watcher::scan_dir(&notes_dir, show_hidden);
                 for node in nodes.iter().filter(|n| !n.is_dir) {
                     if let Ok(note) = notes::Note::from_path(&node.path, &notes_dir) {
                         let title = note.frontmatter.title.clone().unwrap_or_default();
                         let tags = note.frontmatter.tags.clone().unwrap_or_default();
-                        idx.index_note(&note.relative_path, &title, &note.body, &tags).ok();
+                        idx.index_note(&note.relative_path, &title, &note.body, &tags)
+                            .ok();
                     }
                 }
                 anyhow::Ok(())
@@ -105,12 +95,13 @@ async fn main() -> Result<()> {
             for node in nodes.into_iter().filter(|n| !n.is_dir) {
                 let nd = notes_dir.clone();
                 let path = node.path.clone();
-                if let Ok(Ok(note)) = tokio::task::spawn_blocking(move || {
-                    notes::Note::from_path(&path, &nd)
-                })
-                .await
+                if let Ok(Ok(note)) =
+                    tokio::task::spawn_blocking(move || notes::Note::from_path(&path, &nd)).await
                 {
-                    let note_id = note.frontmatter.id.clone()
+                    let note_id = note
+                        .frontmatter
+                        .id
+                        .clone()
                         .unwrap_or_else(|| note.relative_path.clone());
                     let content = format!(
                         "{}\n\n{}",
@@ -140,7 +131,11 @@ async fn main() -> Result<()> {
         let show_hidden = app.config.ui.show_hidden;
         let tx2 = tx.clone();
         tokio::spawn(import::watcher::run_inbox_watcher(
-            inbox_dir, notes_dir, interval, show_hidden, tx2,
+            inbox_dir,
+            notes_dir,
+            interval,
+            show_hidden,
+            tx2,
         ));
     }
 
@@ -380,13 +375,27 @@ async fn run_embed_note(
         Ok(embedding) => {
             let note_path_for_event = note_path.clone();
             let result = tokio::task::spawn_blocking(move || {
-                search::vector::store_embedding(&db, &note_id, &note_path, &content_hash, &embedding, &model)
+                search::vector::store_embedding(
+                    &db,
+                    &note_id,
+                    &note_path,
+                    &content_hash,
+                    &embedding,
+                    &model,
+                )
             })
             .await;
             match result {
-                Ok(Ok(())) => { tx.send(AppEvent::EmbeddingDone(note_path_for_event.into())).ok(); }
-                Ok(Err(e)) => { tx.send(AppEvent::Error(format!("Embed store: {e}"))).ok(); }
-                Err(e) => { tx.send(AppEvent::Error(format!("Embed task: {e}"))).ok(); }
+                Ok(Ok(())) => {
+                    tx.send(AppEvent::EmbeddingDone(note_path_for_event.into()))
+                        .ok();
+                }
+                Ok(Err(e)) => {
+                    tx.send(AppEvent::Error(format!("Embed store: {e}"))).ok();
+                }
+                Err(e) => {
+                    tx.send(AppEvent::Error(format!("Embed task: {e}"))).ok();
+                }
             }
         }
         Err(e) => {
@@ -407,9 +416,16 @@ async fn run_fts_search(
     .await;
 
     match result {
-        Ok(Ok(results)) => { tx.send(AppEvent::SearchResults(results)).ok(); }
-        Ok(Err(e)) => { tx.send(AppEvent::Error(format!("Search error: {e}"))).ok(); }
-        Err(e) => { tx.send(AppEvent::Error(format!("Search task error: {e}"))).ok(); }
+        Ok(Ok(results)) => {
+            tx.send(AppEvent::SearchResults(results)).ok();
+        }
+        Ok(Err(e)) => {
+            tx.send(AppEvent::Error(format!("Search error: {e}"))).ok();
+        }
+        Err(e) => {
+            tx.send(AppEvent::Error(format!("Search task error: {e}")))
+                .ok();
+        }
     }
 }
 
@@ -429,9 +445,15 @@ async fn run_vector_search(
             .await;
 
             match result {
-                Ok(Ok(results)) => { tx.send(AppEvent::VectorSearchResults(results)).ok(); }
-                Ok(Err(e)) => { tx.send(AppEvent::Error(format!("Vector search: {e}"))).ok(); }
-                Err(e) => { tx.send(AppEvent::Error(format!("Vector task: {e}"))).ok(); }
+                Ok(Ok(results)) => {
+                    tx.send(AppEvent::VectorSearchResults(results)).ok();
+                }
+                Ok(Err(e)) => {
+                    tx.send(AppEvent::Error(format!("Vector search: {e}"))).ok();
+                }
+                Err(e) => {
+                    tx.send(AppEvent::Error(format!("Vector task: {e}"))).ok();
+                }
             }
         }
         Err(e) => {
@@ -451,8 +473,13 @@ async fn run_summarize(
         Ok(mut stream) => {
             while let Some(result) = stream.next().await {
                 match result {
-                    Ok(token) => { tx.send(AppEvent::SummaryChunk(token)).ok(); }
-                    Err(e) => { tx.send(AppEvent::SummaryError(e.to_string())).ok(); return; }
+                    Ok(token) => {
+                        tx.send(AppEvent::SummaryChunk(token)).ok();
+                    }
+                    Err(e) => {
+                        tx.send(AppEvent::SummaryError(e.to_string())).ok();
+                        return;
+                    }
                 }
             }
             tx.send(AppEvent::SummaryDone).ok();
@@ -512,8 +539,13 @@ async fn send_chat(
         Ok(mut stream) => {
             while let Some(result) = stream.next().await {
                 match result {
-                    Ok(token) => { tx.send(AppEvent::ChatChunk(token)).ok(); }
-                    Err(e) => { tx.send(AppEvent::ChatError(e.to_string())).ok(); return; }
+                    Ok(token) => {
+                        tx.send(AppEvent::ChatChunk(token)).ok();
+                    }
+                    Err(e) => {
+                        tx.send(AppEvent::ChatError(e.to_string())).ok();
+                        return;
+                    }
                 }
             }
             tx.send(AppEvent::ChatDone).ok();

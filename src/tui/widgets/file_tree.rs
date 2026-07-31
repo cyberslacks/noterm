@@ -62,13 +62,19 @@ fn make_header(label: &str, depth: usize) -> ListItem<'static> {
 fn make_item(node: &FileNode) -> ListItem<'static> {
     let indent = "  ".repeat(node.depth);
     let icon = if node.is_dir {
-        if node.expanded { "▼ " } else { "▶ " }
+        if node.expanded {
+            "▼ "
+        } else {
+            "▶ "
+        }
     } else {
         "  "
     };
 
     let name_style = if node.is_dir {
-        Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+        Style::default()
+            .fg(Color::Cyan)
+            .add_modifier(Modifier::BOLD)
     } else {
         Style::default().fg(Color::White)
     };

@@ -40,7 +40,11 @@ fn collect_entries(
 
     while let Some(Ok(entry)) = entries.next() {
         let path = entry.path();
-        let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+        let name = path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
 
         if !show_hidden && name.starts_with('.') {
             continue;
@@ -57,8 +61,16 @@ fn collect_entries(
     files.sort();
 
     for dir_path in dirs {
-        let name = dir_path.file_name().unwrap_or_default().to_string_lossy().to_string();
-        let relative = dir_path.strip_prefix(root).unwrap_or(&dir_path).to_string_lossy().to_string();
+        let name = dir_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let relative = dir_path
+            .strip_prefix(root)
+            .unwrap_or(&dir_path)
+            .to_string_lossy()
+            .to_string();
         nodes.push(FileNode {
             path: dir_path.clone(),
             relative_path: relative,
@@ -73,15 +85,25 @@ fn collect_entries(
     }
 
     for file_path in files {
-        let name = file_path.file_name().unwrap_or_default().to_string_lossy().to_string();
-        let relative = file_path.strip_prefix(root).unwrap_or(&file_path).to_string_lossy().to_string();
+        let name = file_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .to_string();
+        let relative = file_path
+            .strip_prefix(root)
+            .unwrap_or(&file_path)
+            .to_string_lossy()
+            .to_string();
         let meta = std::fs::metadata(&file_path).ok();
-        let modified_secs = meta.as_ref()
+        let modified_secs = meta
+            .as_ref()
             .and_then(|m| m.modified().ok())
             .and_then(|t| t.duration_since(std::time::SystemTime::UNIX_EPOCH).ok())
             .map(|d| d.as_secs())
             .unwrap_or(0);
-        let created_secs = meta.as_ref()
+        let created_secs = meta
+            .as_ref()
             .and_then(|m| m.created().ok())
             .and_then(|t| t.duration_since(std::time::SystemTime::UNIX_EPOCH).ok())
             .map(|d| d.as_secs())

@@ -10,7 +10,11 @@ use tantivy::{
 use crate::notes::SearchResult;
 
 fn owned_str(v: &OwnedValue) -> Option<&str> {
-    if let OwnedValue::Str(s) = v { Some(s) } else { None }
+    if let OwnedValue::Str(s) = v {
+        Some(s)
+    } else {
+        None
+    }
 }
 
 pub struct FtsIndex {
@@ -54,13 +58,7 @@ impl FtsIndex {
         })
     }
 
-    pub fn index_note(
-        &self,
-        path: &str,
-        title: &str,
-        body: &str,
-        tags: &[String],
-    ) -> Result<()> {
+    pub fn index_note(&self, path: &str, title: &str, body: &str, tags: &[String]) -> Result<()> {
         let mut writer: IndexWriter = self.index.writer(50_000_000)?;
 
         // Delete any existing doc for this path
@@ -88,10 +86,8 @@ impl FtsIndex {
 
     pub fn search(&self, query_str: &str, limit: usize) -> Result<Vec<SearchResult>> {
         let searcher = self.reader.searcher();
-        let query_parser = QueryParser::for_index(
-            &self.index,
-            vec![self.f_title, self.f_body, self.f_tags],
-        );
+        let query_parser =
+            QueryParser::for_index(&self.index, vec![self.f_title, self.f_body, self.f_tags]);
 
         let search_fields = [self.f_title, self.f_body, self.f_tags];
         let query = build_search_query(query_str, &search_fields, &query_parser);
@@ -133,11 +129,7 @@ impl FtsIndex {
 ///
 /// When the user uses explicit operators (`"phrase"`, `AND`, `OR`, field:), we
 /// hand off to QueryParser unchanged.
-fn build_search_query(
-    query_str: &str,
-    fields: &[Field],
-    parser: &QueryParser,
-) -> Box<dyn Query> {
+fn build_search_query(query_str: &str, fields: &[Field], parser: &QueryParser) -> Box<dyn Query> {
     let has_operators = query_str.contains('"')
         || query_str.contains(':')
         || query_str.to_ascii_uppercase().contains(" AND ")
@@ -194,7 +186,10 @@ fn build_search_query(
 fn regex_escape(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 4);
     for c in s.chars() {
-        if matches!(c, '.' | '+' | '*' | '?' | '^' | '$' | '{' | '}' | '[' | ']' | '|' | '(' | ')' | '\\') {
+        if matches!(
+            c,
+            '.' | '+' | '*' | '?' | '^' | '$' | '{' | '}' | '[' | ']' | '|' | '(' | ')' | '\\'
+        ) {
             out.push('\\');
         }
         out.push(c);

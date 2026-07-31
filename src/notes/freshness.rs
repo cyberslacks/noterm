@@ -68,7 +68,12 @@ pub fn compute(
     let updated_days = updated.and_then(|s| parse_iso_date(truncate_to_date(s)));
     let review_days = review_every.and_then(parse_duration_days);
     let expires_days = expires.and_then(|s| parse_iso_date(truncate_to_date(s)));
-    Some(FreshnessInfo { updated_days, review_days, expires_days, today_days })
+    Some(FreshnessInfo {
+        updated_days,
+        review_days,
+        expires_days,
+        today_days,
+    })
 }
 
 /// A note with freshness metadata, computed for the freshness view panel.
@@ -104,9 +109,7 @@ pub fn scan_paths(paths: &[PathBuf], notes_dir: &Path) -> Vec<FreshnessEntry> {
             fm.review_every.as_deref(),
             fm.expires.as_deref(),
         );
-        let status = info
-            .map(|i| i.status())
-            .unwrap_or(FreshnessStatus::Fresh);
+        let status = info.map(|i| i.status()).unwrap_or(FreshnessStatus::Fresh);
 
         let relative_path = path
             .strip_prefix(notes_dir)
@@ -114,10 +117,7 @@ pub fn scan_paths(paths: &[PathBuf], notes_dir: &Path) -> Vec<FreshnessEntry> {
             .to_string_lossy()
             .to_string();
 
-        let title = fm
-            .title
-            .clone()
-            .unwrap_or_else(|| relative_path.clone());
+        let title = fm.title.clone().unwrap_or_else(|| relative_path.clone());
 
         entries.push(FreshnessEntry {
             path: path.clone(),
@@ -185,8 +185,7 @@ fn days_since_epoch(y: i32, m: u32, d: u32) -> i64 {
     let a = (14 - m as i32) / 12;
     let y = y + 4800 - a;
     let m_adj = m as i32 + 12 * a - 3;
-    let jdn =
-        d as i32 + (153 * m_adj + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045;
+    let jdn = d as i32 + (153 * m_adj + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045;
     (jdn - 2440588) as i64
 }
 

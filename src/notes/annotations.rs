@@ -84,7 +84,9 @@ pub fn load_annotations(notes_dir: &Path, slug: &str) -> Vec<Annotation> {
             AnnotationStatus::Incorporated => 2,
             AnnotationStatus::Ignored => 3,
         };
-        rank(&a.status).cmp(&rank(&b.status)).then(b.added.cmp(&a.added))
+        rank(&a.status)
+            .cmp(&rank(&b.status))
+            .then(b.added.cmp(&a.added))
     });
     annotations
 }
@@ -112,14 +114,20 @@ pub fn mark_stale_annotations(notes_dir: &Path, slug: &str, note_modified: &str)
     let date_str = &note_modified[..10.min(note_modified.len())];
     let modified_days = crate::notes::freshness::parse_iso_date(date_str);
     let dir = annotations_dir(notes_dir, slug);
-    let Ok(entries) = std::fs::read_dir(&dir) else { return };
+    let Ok(entries) = std::fs::read_dir(&dir) else {
+        return;
+    };
     for entry in entries.flatten() {
         let path = entry.path();
         if path.extension().and_then(|e| e.to_str()) != Some("yaml") {
             continue;
         }
-        let Ok(content) = std::fs::read_to_string(&path) else { continue };
-        let Ok(mut ann) = serde_yaml::from_str::<Annotation>(&content) else { continue };
+        let Ok(content) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(mut ann) = serde_yaml::from_str::<Annotation>(&content) else {
+            continue;
+        };
         if ann.status != AnnotationStatus::Pending {
             continue;
         }

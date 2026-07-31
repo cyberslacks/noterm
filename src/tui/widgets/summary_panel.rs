@@ -4,18 +4,15 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::AppState;
 use super::search_overlay::centered_rect;
+use crate::app::AppState;
 
 pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
     let popup = centered_rect(88, 88, area);
     f.render_widget(ratatui::widgets::Clear, popup);
 
     let (title, border_color) = if state.summarize_loading {
-        (
-            " Generating summary… (Esc to cancel) ",
-            Color::Yellow,
-        )
+        (" Generating summary… (Esc to cancel) ", Color::Yellow)
     } else {
         (
             " Summary  [j/k] scroll · [Esc] close & insert into note ",
@@ -33,8 +30,8 @@ pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
     f.render_widget(block, popup);
 
     if state.summarize_buf.is_empty() && state.summarize_loading {
-        let loading = Paragraph::new("Connecting to summarizer…")
-            .style(Style::default().fg(Color::DarkGray));
+        let loading =
+            Paragraph::new("Connecting to summarizer…").style(Style::default().fg(Color::DarkGray));
         f.render_widget(loading, inner);
     } else {
         let para = Paragraph::new(state.summarize_buf.clone())

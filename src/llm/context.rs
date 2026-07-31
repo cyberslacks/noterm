@@ -25,7 +25,11 @@ pub fn build_system_prompt(
     if !kazam_pages.is_empty() {
         prompt.push_str("\n\n## Kazam KB Context\n");
         for page in kazam_pages.iter().take(10) {
-            let excerpt = if page.len() > 1500 { &page[..1500] } else { page };
+            let excerpt = if page.len() > 1500 {
+                &page[..1500]
+            } else {
+                page
+            };
             prompt.push_str(&format!("\n```\n{excerpt}\n```\n"));
         }
     }

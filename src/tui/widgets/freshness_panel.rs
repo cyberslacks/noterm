@@ -6,9 +6,9 @@ use ratatui::{
     Frame,
 };
 
+use super::search_overlay::centered_rect;
 use crate::app::AppState;
 use crate::notes::freshness::FreshnessStatus;
-use super::search_overlay::centered_rect;
 
 pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
     let popup = centered_rect(85, 80, area);
@@ -67,7 +67,9 @@ pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
             ListItem::new(Line::from(vec![
                 Span::styled(
                     format!("{:<20}", badge_text),
-                    Style::default().fg(badge_color).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(badge_color)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     entry.relative_path.clone(),
@@ -99,9 +101,8 @@ pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
 
     // Summary counts
     let (expired, overdue, due_soon, fresh) = count_statuses(&state.freshness.entries);
-    let summary = format!(
-        " expired:{expired}  overdue:{overdue}  due soon:{due_soon}  fresh:{fresh}",
-    );
+    let summary =
+        format!(" expired:{expired}  overdue:{overdue}  due soon:{due_soon}  fresh:{fresh}",);
     f.render_widget(
         Paragraph::new(summary).style(Style::default().fg(Color::DarkGray)),
         chunks[1],

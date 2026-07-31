@@ -1,7 +1,7 @@
 pub mod claude;
+pub mod context;
 pub mod ollama;
 pub mod openai;
-pub mod context;
 pub mod summarizer;
 
 use anyhow::Result;
@@ -28,11 +28,17 @@ pub struct ChatMessage {
 
 impl ChatMessage {
     pub fn user(content: impl Into<String>) -> Self {
-        Self { role: ChatRole::User, content: content.into() }
+        Self {
+            role: ChatRole::User,
+            content: content.into(),
+        }
     }
 
     pub fn assistant(content: impl Into<String>) -> Self {
-        Self { role: ChatRole::Assistant, content: content.into() }
+        Self {
+            role: ChatRole::Assistant,
+            content: content.into(),
+        }
     }
 }
 

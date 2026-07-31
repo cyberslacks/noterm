@@ -85,7 +85,11 @@ impl LlmClient for ClaudeClient {
                     }
                 }
             }
-            if tokens.is_empty() { None } else { Some(Ok(tokens)) }
+            if tokens.is_empty() {
+                None
+            } else {
+                Some(Ok(tokens))
+            }
         });
 
         Ok(Box::pin(token_stream))

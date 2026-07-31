@@ -12,9 +12,8 @@ use crate::{
     kazam::{kb_browser::KazamPage, mcp_client::KazamMcpClient},
     llm::ChatMessage,
     notes::{
-        annotations::Annotation,
-        freshness::FreshnessEntry,
-        FileNode, Note, SearchResult, VectorSearchResult,
+        annotations::Annotation, freshness::FreshnessEntry, FileNode, Note, SearchResult,
+        VectorSearchResult,
     },
     tasks::KanbanState,
 };
@@ -69,7 +68,11 @@ pub fn build_tree_display(file_tree: &[FileNode], group_by: &TreeGroupBy) -> Vec
                         TreeGroupBy::ModifiedDate => file_tree[idx].modified_secs,
                         TreeGroupBy::CreatedDate => {
                             let c = file_tree[idx].created_secs;
-                            if c == 0 { file_tree[idx].modified_secs } else { c }
+                            if c == 0 {
+                                file_tree[idx].modified_secs
+                            } else {
+                                c
+                            }
                         }
                         TreeGroupBy::None => 0,
                     }
@@ -84,13 +87,20 @@ pub fn build_tree_display(file_tree: &[FileNode], group_by: &TreeGroupBy) -> Vec
                     TreeGroupBy::ModifiedDate => file_tree[idx].modified_secs,
                     TreeGroupBy::CreatedDate => {
                         let c = file_tree[idx].created_secs;
-                        if c == 0 { file_tree[idx].modified_secs } else { c }
+                        if c == 0 {
+                            file_tree[idx].modified_secs
+                        } else {
+                            c
+                        }
                     }
                     TreeGroupBy::None => 0,
                 };
                 let label = date_group_label(ts, now_secs);
                 if cur_label.as_deref() != Some(&label) {
-                    result.push(TreeItem::Header { label: label.clone(), depth });
+                    result.push(TreeItem::Header {
+                        label: label.clone(),
+                        depth,
+                    });
                     cur_label = Some(label);
                 }
                 result.push(TreeItem::Node(idx));
@@ -111,8 +121,7 @@ fn date_group_label(file_secs: u64, now_secs: u64) -> String {
         _ => {
             let (year, month, _) = unix_to_ymd(file_secs);
             const MONTHS: [&str; 12] = [
-                "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+                "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
             ];
             format!("{} {}", MONTHS[(month.saturating_sub(1)) as usize], year)
         }
@@ -146,15 +155,15 @@ pub enum Mode {
     Kanban,
     Git,
     Help,
-    NewNote,        // inline prompt for new note name
-    GitCommitInput, // inline commit message prompt
-    ConfirmDelete,  // confirmation overlay before deleting a note
-    MeetilyImport,  // Meetily meeting browser overlay
-    Settings,       // LLM / provider settings panel
-    Summarize,         // streaming AI summary overlay
-    FreshnessView,     // Kazam-style staleness dashboard overlay
-    AnnotationPanel,   // sidecar annotation viewer/composer
-    KazamKbBrowser,    // Kazam KB page browser/importer
+    NewNote,         // inline prompt for new note name
+    GitCommitInput,  // inline commit message prompt
+    ConfirmDelete,   // confirmation overlay before deleting a note
+    MeetilyImport,   // Meetily meeting browser overlay
+    Settings,        // LLM / provider settings panel
+    Summarize,       // streaming AI summary overlay
+    FreshnessView,   // Kazam-style staleness dashboard overlay
+    AnnotationPanel, // sidecar annotation viewer/composer
+    KazamKbBrowser,  // Kazam KB page browser/importer
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -192,12 +201,18 @@ pub enum AppEvent {
     },
     EmbeddingDone(PathBuf),
     IndexingComplete,
-    NoteImported(PathBuf),   // a note was auto-imported (watch folder or API)
-    NoteDeleted(PathBuf),    // a note was deleted from disk
+    NoteImported(PathBuf), // a note was auto-imported (watch folder or API)
+    NoteDeleted(PathBuf),  // a note was deleted from disk
     MeetilyMeetingsLoaded(Vec<MeetilyMeeting>),
-    MeetilyImportDone { path: PathBuf, meetily_id: String },
+    MeetilyImportDone {
+        path: PathBuf,
+        meetily_id: String,
+    },
     FreshnessListLoaded(Vec<FreshnessEntry>),
-    AnnotationsLoaded { slug: String, entries: Vec<Annotation> },
+    AnnotationsLoaded {
+        slug: String,
+        entries: Vec<Annotation>,
+    },
     AnnotationSaved(String), // slug — triggers reload
     KazamItemsLoaded(Vec<KazamPage>),
     KazamImportDone(PathBuf),
@@ -206,7 +221,10 @@ pub enum AppEvent {
     KazamMcpConnected(Arc<Mutex<KazamMcpClient>>),
     KazamMcpError(String),
     KazamKbContextLoaded(Vec<String>),
-    ModelsLoaded { ollama: Vec<String>, openai: Vec<String> },
+    ModelsLoaded {
+        ollama: Vec<String>,
+        openai: Vec<String>,
+    },
     ForceReembed,
     SummaryChunk(String),
     SummaryDone,
@@ -484,17 +502,17 @@ impl AppState {
                 }
             }
 
-            AppEvent::GitLogResult(result) => {
-                match result {
-                    Ok(log) => self.git_log = log,
-                    Err(e) => self.set_status(format!("Git log error: {e}"), StatusLevel::Error),
-                }
-            }
+            AppEvent::GitLogResult(result) => match result {
+                Ok(log) => self.git_log = log,
+                Err(e) => self.set_status(format!("Git log error: {e}"), StatusLevel::Error),
+            },
 
             AppEvent::GitOpComplete(result) => {
                 self.git_loading = false;
                 match result {
-                    Ok(()) => self.set_status("Git operation complete".into(), StatusLevel::Success),
+                    Ok(()) => {
+                        self.set_status("Git operation complete".into(), StatusLevel::Success)
+                    }
                     Err(e) => self.set_status(format!("Git error: {e}"), StatusLevel::Error),
                 }
             }
@@ -508,7 +526,8 @@ impl AppState {
                         return;
                     }
                 }
-                self.chat_messages.push(ChatMessage::assistant(self.chat_streaming_buf.clone()));
+                self.chat_messages
+                    .push(ChatMessage::assistant(self.chat_streaming_buf.clone()));
             }
 
             AppEvent::ChatDone => {
@@ -535,7 +554,11 @@ impl AppState {
             }
 
             AppEvent::NoteImported(path) => {
-                let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                let name = path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
                 self.set_status(format!("Imported: {name}"), StatusLevel::Success);
                 // File tree will be refreshed by a follow-up FileTreeRefresh event
             }
@@ -549,7 +572,11 @@ impl AppState {
                         self.is_modified = false;
                     }
                 }
-                let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                let name = path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
                 self.set_status(format!("Deleted: {name}"), StatusLevel::Success);
             }
 
@@ -561,7 +588,11 @@ impl AppState {
 
             AppEvent::MeetilyImportDone { path, meetily_id } => {
                 self.meetily.imported_ids.insert(meetily_id);
-                let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                let name = path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
                 self.set_status(format!("Imported meeting: {name}"), StatusLevel::Success);
                 // Trigger file tree refresh
                 let tx = self.tx.clone();
@@ -587,7 +618,9 @@ impl AppState {
                 if self.annotation.slug == slug {
                     let pending = entries
                         .iter()
-                        .filter(|a| a.status == crate::notes::annotations::AnnotationStatus::Pending)
+                        .filter(|a| {
+                            a.status == crate::notes::annotations::AnnotationStatus::Pending
+                        })
                         .count();
                     self.annotation.entries = entries;
                     self.annotation.cursor = 0;
@@ -618,7 +651,11 @@ impl AppState {
             }
 
             AppEvent::KazamImportDone(path) => {
-                let name = path.file_name().unwrap_or_default().to_string_lossy().to_string();
+                let name = path
+                    .file_name()
+                    .unwrap_or_default()
+                    .to_string_lossy()
+                    .to_string();
                 self.set_status(format!("Imported from Kazam: {name}"), StatusLevel::Success);
                 // Refresh file tree and open the imported note
                 let tx = self.tx.clone();
@@ -681,9 +718,13 @@ impl AppState {
             AppEvent::SummaryDone => {
                 self.summarize_loading = false;
                 match self.insert_summary_into_note() {
-                    Ok(true) => self.set_status("Summary inserted into note".into(), StatusLevel::Success),
+                    Ok(true) => {
+                        self.set_status("Summary inserted into note".into(), StatusLevel::Success)
+                    }
                     Ok(false) => {}
-                    Err(e) => self.set_status(format!("Summary insert failed: {e}"), StatusLevel::Error),
+                    Err(e) => {
+                        self.set_status(format!("Summary insert failed: {e}"), StatusLevel::Error)
+                    }
                 }
             }
 
@@ -826,7 +867,10 @@ impl AppState {
         // Reset cursor to first Node, skipping any leading Header
         self.selected_file_idx = 0;
         while self.selected_file_idx < self.tree_display.len()
-            && matches!(self.tree_display[self.selected_file_idx], TreeItem::Header { .. })
+            && matches!(
+                self.tree_display[self.selected_file_idx],
+                TreeItem::Header { .. }
+            )
         {
             self.selected_file_idx += 1;
         }
@@ -908,8 +952,9 @@ fn inject_summary_into_body(body: &str, summary_text: &str) -> String {
         // Find where this section ends: next "## " at the same depth, or EOF.
         let after_heading = start + search.len();
         let rest = &body[after_heading..];
-        let section_end = rest.find("\n## ")
-            .map(|p| after_heading + p)     // keep the '\n' so next heading stays on its own line
+        let section_end = rest
+            .find("\n## ")
+            .map(|p| after_heading + p) // keep the '\n' so next heading stays on its own line
             .unwrap_or(body.len());
 
         let before = body[..start].trim_end_matches('\n');
@@ -929,7 +974,10 @@ fn inject_summary_into_body(body: &str, summary_text: &str) -> String {
         if body.trim().is_empty() {
             format!("## Summary\n\n{summary_text}\n")
         } else {
-            format!("## Summary\n\n{summary_text}\n\n---\n\n{}", body.trim_start())
+            format!(
+                "## Summary\n\n{summary_text}\n\n---\n\n{}",
+                body.trim_start()
+            )
         }
     }
 }

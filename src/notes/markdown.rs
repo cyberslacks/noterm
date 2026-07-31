@@ -153,10 +153,7 @@ pub fn render(markdown: &str) -> Vec<Line<'static>> {
                         lines.push(Line::from(std::mem::take(&mut current_spans)));
                     }
                     if !line_str.is_empty() {
-                        current_spans.push(Span::styled(
-                            format!("{prefix}{line_str}"),
-                            style,
-                        ));
+                        current_spans.push(Span::styled(format!("{prefix}{line_str}"), style));
                     } else if in_code_block {
                         current_spans.push(Span::raw(""));
                     }

@@ -40,7 +40,9 @@ pub fn parse(raw: &str) -> (NoteFrontmatter, String) {
         Some(pos) => {
             let yaml_str = &after_first[..pos];
             let body_start = pos + 4; // skip "\n---"
-            let body = after_first[body_start..].trim_start_matches('\n').to_string();
+            let body = after_first[body_start..]
+                .trim_start_matches('\n')
+                .to_string();
 
             let fm: NoteFrontmatter = serde_yaml::from_str(yaml_str).unwrap_or_default();
             (fm, body)

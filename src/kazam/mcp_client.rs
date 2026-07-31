@@ -1,4 +1,4 @@
-/// Kazam MCP client: connects to `kazam mcp --kb <path>` over stdio.
+/// Kazam MCP client: connects to `kazam mcp` in the KB directory over stdio.
 ///
 /// Protocol: JSON-RPC 2.0, newline-delimited, sequential (one in-flight request at a time).
 /// All I/O is blocking — always call from `spawn_blocking`.
@@ -24,10 +24,13 @@ impl std::fmt::Debug for KazamMcpClient {
 }
 
 impl KazamMcpClient {
-    /// Spawn `kazam mcp --kb <kb_path>` and perform the MCP initialize handshake.
+    /// Spawn the current Kazam stdio server in its KB directory and perform the
+    /// MCP initialize handshake. Kazam resolves its project from the working
+    /// directory; older `--kb` invocation is no longer used.
     pub fn spawn(binary_path: &str, kb_path: &str) -> anyhow::Result<Self> {
         let mut child = Command::new(binary_path)
-            .args(["mcp", "--kb", kb_path])
+            .arg("mcp")
+            .current_dir(kb_path)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::null())
@@ -37,13 +40,18 @@ impl KazamMcpClient {
         let stdin = child.stdin.take().unwrap();
         let stdout = BufReader::new(child.stdout.take().unwrap());
 
-        let mut client = Self { child, stdin, stdout, next_id: 1 };
+        let mut client = Self {
+            child,
+            stdin,
+            stdout,
+            next_id: 1,
+        };
 
         // MCP initialize
         let init_resp = client.call(
             "initialize",
             json!({
-                "protocolVersion": "2024-11-05",
+                "protocolVersion": "2025-03-26",
                 "capabilities": {},
                 "clientInfo": { "name": "noterm", "version": env!("CARGO_PKG_VERSION") }
             }),
@@ -96,10 +104,7 @@ impl KazamMcpClient {
 
     /// Call a Kazam MCP tool by name and return the result content.
     fn tool_call(&mut self, tool: &str, args: Value) -> anyhow::Result<Value> {
-        let resp = self.call(
-            "tools/call",
-            json!({ "name": tool, "arguments": args }),
-        )?;
+        let resp = self.call("tools/call", json!({ "name": tool, "arguments": args }))?;
         if let Some(err) = resp.get("error") {
             anyhow::bail!("MCP tool error: {err}");
         }
@@ -107,7 +112,7 @@ impl KazamMcpClient {
     }
 
     pub fn search(&mut self, query: &str) -> anyhow::Result<Vec<Value>> {
-        let result = self.tool_call("search_pages", json!({ "query": query }))?;
+        let result = self.tool_call("search", json!({ "query": query }))?;
         Ok(result["content"].as_array().cloned().unwrap_or_default())
     }
 
@@ -134,12 +139,16 @@ impl KazamMcpClient {
         Ok(())
     }
 
-    pub fn update_annotation(
-        &mut self,
-        slug: &str,
-        id: &str,
-        status: &str,
-    ) -> anyhow::Result<()> {
+    pub fn list_annotations(&mut self, slug: &str) -> anyhow::Result<Vec<Value>> {
+        let result = self.tool_call("list_annotations", json!({ "page": slug }))?;
+        Ok(result["content"].as_array().cloned().unwrap_or_default())
+    }
+
+    pub fn get_config(&mut self) -> anyhow::Result<Value> {
+        self.tool_call("get_config", json!({}))
+    }
+
+    pub fn update_annotation(&mut self, slug: &str, id: &str, status: &str) -> anyhow::Result<()> {
         self.tool_call(
             "update_annotation",
             json!({ "slug": slug, "id": id, "status": status }),

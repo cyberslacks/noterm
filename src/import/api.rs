@@ -101,13 +101,24 @@ async fn create_note(
 ) -> impl IntoResponse {
     let result = tokio::task::spawn_blocking({
         let state = Arc::clone(&state);
-        move || create_note_sync(&state, &req.title, req.content.as_deref().unwrap_or(""), req.tags.as_deref(), req.folder.as_deref())
+        move || {
+            create_note_sync(
+                &state,
+                &req.title,
+                req.content.as_deref().unwrap_or(""),
+                req.tags.as_deref(),
+                req.folder.as_deref(),
+            )
+        }
     })
     .await;
 
     match result {
         Ok(Ok(resp)) => {
-            state.tx.send(AppEvent::NoteImported(PathBuf::from(&resp.path))).ok();
+            state
+                .tx
+                .send(AppEvent::NoteImported(PathBuf::from(&resp.path)))
+                .ok();
             let nodes = scan_dir(&state.notes_dir, state.show_hidden);
             state.tx.send(AppEvent::FileTreeRefresh(nodes)).ok();
             (StatusCode::CREATED, Json(resp)).into_response()
@@ -129,19 +140,31 @@ async fn import_text(
     State(state): State<Arc<ApiState>>,
     Json(req): Json<ImportTextRequest>,
 ) -> impl IntoResponse {
-    let title = req.title.clone().unwrap_or_else(|| {
-        format!("Import {}", Utc::now().format("%Y-%m-%d %H:%M"))
-    });
+    let title = req
+        .title
+        .clone()
+        .unwrap_or_else(|| format!("Import {}", Utc::now().format("%Y-%m-%d %H:%M")));
 
     let result = tokio::task::spawn_blocking({
         let state = Arc::clone(&state);
-        move || create_note_sync(&state, &title, &req.text, req.tags.as_deref(), req.folder.as_deref())
+        move || {
+            create_note_sync(
+                &state,
+                &title,
+                &req.text,
+                req.tags.as_deref(),
+                req.folder.as_deref(),
+            )
+        }
     })
     .await;
 
     match result {
         Ok(Ok(resp)) => {
-            state.tx.send(AppEvent::NoteImported(PathBuf::from(&resp.path))).ok();
+            state
+                .tx
+                .send(AppEvent::NoteImported(PathBuf::from(&resp.path)))
+                .ok();
             let nodes = scan_dir(&state.notes_dir, state.show_hidden);
             state.tx.send(AppEvent::FileTreeRefresh(nodes)).ok();
             (StatusCode::CREATED, Json(resp)).into_response()
@@ -179,7 +202,11 @@ fn create_note_sync(
     let tags_yaml = tags
         .filter(|t| !t.is_empty())
         .map(|t| {
-            let items = t.iter().map(|s| format!("\"{s}\"")).collect::<Vec<_>>().join(", ");
+            let items = t
+                .iter()
+                .map(|s| format!("\"{s}\""))
+                .collect::<Vec<_>>()
+                .join(", ");
             format!("tags: [{items}]\n")
         })
         .unwrap_or_default();

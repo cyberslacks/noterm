@@ -106,12 +106,12 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         };
         Line::from(Span::styled(format!("{msg} "), Style::default().fg(color)))
     } else if let Some(version) = &state.update_available {
-        Line::from(vec![
-            Span::styled(
-                format!(" \u{2b06} {version} available "),
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD),
-            ),
-        ])
+        Line::from(vec![Span::styled(
+            format!(" \u{2b06} {version} available "),
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD),
+        )])
     } else {
         let branch = state.git_branch();
         Line::from(Span::styled(
@@ -125,7 +125,10 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         .constraints([Constraint::Min(0), Constraint::Length(35)])
         .split(area);
 
-    f.render_widget(Paragraph::new(left).style(Style::default().bg(Color::Black)), chunks[0]);
+    f.render_widget(
+        Paragraph::new(left).style(Style::default().bg(Color::Black)),
+        chunks[0],
+    );
     f.render_widget(
         Paragraph::new(right_text).style(Style::default().bg(Color::Black)),
         chunks[1],

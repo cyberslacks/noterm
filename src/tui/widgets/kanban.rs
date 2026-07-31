@@ -53,7 +53,9 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
                     _ => "   ",
                 };
                 let style = if is_focused && j == state.kanban.focused_card {
-                    Style::default().add_modifier(Modifier::BOLD).fg(Color::White)
+                    Style::default()
+                        .add_modifier(Modifier::BOLD)
+                        .fg(Color::White)
                 } else {
                     Style::default().fg(Color::Gray)
                 };

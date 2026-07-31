@@ -23,9 +23,7 @@ pub fn get_status(repo_path: &Path) -> Result<GitStatus> {
         let s = entry.status();
 
         if s.intersects(
-            git2::Status::INDEX_NEW
-                | git2::Status::INDEX_MODIFIED
-                | git2::Status::INDEX_DELETED,
+            git2::Status::INDEX_NEW | git2::Status::INDEX_MODIFIED | git2::Status::INDEX_DELETED,
         ) {
             staged.push(path.clone());
         }
@@ -62,10 +60,7 @@ pub fn get_log(repo_path: &Path, limit: usize) -> Result<Vec<GitCommit>> {
         let commit = repo.find_commit(oid)?;
         commits.push(GitCommit {
             hash: oid.to_string()[..8].to_string(),
-            message: commit
-                .summary()
-                .unwrap_or("")
-                .to_string(),
+            message: commit.summary().unwrap_or("").to_string(),
             author: commit.author().name().unwrap_or("").to_string(),
             time: format_time(commit.time().seconds()),
         });

@@ -65,7 +65,11 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         }
         KeyCode::Char('d') => {
             // Only delete files, not directories
-            if state.selected_file_node().map(|n| !n.is_dir).unwrap_or(false) {
+            if state
+                .selected_file_node()
+                .map(|n| !n.is_dir)
+                .unwrap_or(false)
+            {
                 state.enter_mode(Mode::ConfirmDelete);
             }
         }
@@ -139,8 +143,12 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
             let openai_key = state.config.llm.openai_api_key.clone().unwrap_or_default();
             let tx = state.tx.clone();
             tokio::spawn(async move {
-                let ollama = crate::llm::list_ollama_models(&ollama_url).await.unwrap_or_default();
-                let openai = crate::llm::list_openai_models(&openai_url, &openai_key).await.unwrap_or_default();
+                let ollama = crate::llm::list_ollama_models(&ollama_url)
+                    .await
+                    .unwrap_or_default();
+                let openai = crate::llm::list_openai_models(&openai_url, &openai_key)
+                    .await
+                    .unwrap_or_default();
                 tx.send(AppEvent::ModelsLoaded { ollama, openai }).ok();
             });
         }
@@ -158,9 +166,15 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                     })
                     .await;
                     match result {
-                        Ok(Ok(meetings)) => { tx.send(AppEvent::MeetilyMeetingsLoaded(meetings)).ok(); }
-                        Ok(Err(e)) => { tx.send(AppEvent::Error(format!("Meetily: {e}"))).ok(); }
-                        Err(e) => { tx.send(AppEvent::Error(format!("Meetily task: {e}"))).ok(); }
+                        Ok(Ok(meetings)) => {
+                            tx.send(AppEvent::MeetilyMeetingsLoaded(meetings)).ok();
+                        }
+                        Ok(Err(e)) => {
+                            tx.send(AppEvent::Error(format!("Meetily: {e}"))).ok();
+                        }
+                        Err(e) => {
+                            tx.send(AppEvent::Error(format!("Meetily task: {e}"))).ok();
+                        }
                     }
                 });
             }
@@ -185,16 +199,30 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                     let body = note.body.clone();
                     let frontmatter = note.frontmatter.clone();
                     let tx = state.tx.clone();
-                    state.set_status("Exporting to Kazam KB…".into(), crate::app::StatusLevel::Info);
+                    state.set_status(
+                        "Exporting to Kazam KB…".into(),
+                        crate::app::StatusLevel::Info,
+                    );
                     tokio::spawn(async move {
                         let result = tokio::task::spawn_blocking(move || {
-                            crate::export::kazam::export_note(&note_path, &body, &frontmatter, &kb_path)
+                            crate::export::kazam::export_note(
+                                &note_path,
+                                &body,
+                                &frontmatter,
+                                &kb_path,
+                            )
                         })
                         .await;
                         match result {
-                            Ok(Ok(path)) => { tx.send(AppEvent::KazamExportDone(path)).ok(); }
-                            Ok(Err(e)) => { tx.send(AppEvent::KazamExportError(e.to_string())).ok(); }
-                            Err(e) => { tx.send(AppEvent::KazamExportError(e.to_string())).ok(); }
+                            Ok(Ok(path)) => {
+                                tx.send(AppEvent::KazamExportDone(path)).ok();
+                            }
+                            Ok(Err(e)) => {
+                                tx.send(AppEvent::KazamExportError(e.to_string())).ok();
+                            }
+                            Err(e) => {
+                                tx.send(AppEvent::KazamExportError(e.to_string())).ok();
+                            }
                         }
                     });
                 } else {
@@ -214,12 +242,18 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                 state.kazam_mcp_connected = false;
                 state.kazam_kb_pages.clear();
                 state.chat_kazam_context = false;
-                state.set_status("Kazam MCP disconnected".into(), crate::app::StatusLevel::Info);
+                state.set_status(
+                    "Kazam MCP disconnected".into(),
+                    crate::app::StatusLevel::Info,
+                );
             } else if let Some(kb_path) = &state.config.kazam.kb_path {
                 let binary_path = state.config.kazam.binary_path.clone();
                 let kb_path = kb_path.clone();
                 let tx = state.tx.clone();
-                state.set_status("Connecting to Kazam MCP…".into(), crate::app::StatusLevel::Info);
+                state.set_status(
+                    "Connecting to Kazam MCP…".into(),
+                    crate::app::StatusLevel::Info,
+                );
                 tokio::spawn(async move {
                     let result = tokio::task::spawn_blocking(move || {
                         crate::kazam::mcp_client::KazamMcpClient::spawn(&binary_path, &kb_path)
@@ -230,8 +264,12 @@ async fn handle_normal(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                             let wrapped = std::sync::Arc::new(std::sync::Mutex::new(client));
                             tx.send(AppEvent::KazamMcpConnected(wrapped)).ok();
                         }
-                        Ok(Err(e)) => { tx.send(AppEvent::KazamMcpError(e.to_string())).ok(); }
-                        Err(e) => { tx.send(AppEvent::KazamMcpError(e.to_string())).ok(); }
+                        Ok(Err(e)) => {
+                            tx.send(AppEvent::KazamMcpError(e.to_string())).ok();
+                        }
+                        Err(e) => {
+                            tx.send(AppEvent::KazamMcpError(e.to_string())).ok();
+                        }
                     }
                 });
             } else {
@@ -426,15 +464,25 @@ fn index_current_note(state: &AppState) {
         });
 
         if state.config.search.embed_on_save {
-            let note_id = note.frontmatter.id.clone()
+            let note_id = note
+                .frontmatter
+                .id
+                .clone()
                 .unwrap_or_else(|| note.relative_path.clone());
-            let content = format!("{}\n\n{}", note.frontmatter.title.clone().unwrap_or_default(), note.body);
-            state.tx.send(crate::app::AppEvent::EmbedRequest {
-                note_id,
-                note_path: note.relative_path.clone(),
-                content_hash: note.content_hash.clone(),
-                content,
-            }).ok();
+            let content = format!(
+                "{}\n\n{}",
+                note.frontmatter.title.clone().unwrap_or_default(),
+                note.body
+            );
+            state
+                .tx
+                .send(crate::app::AppEvent::EmbedRequest {
+                    note_id,
+                    note_path: note.relative_path.clone(),
+                    content_hash: note.content_hash.clone(),
+                    content,
+                })
+                .ok();
         }
     }
 }
@@ -464,9 +512,15 @@ fn handle_search(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                     })
                     .await;
                     match result {
-                        Ok(Ok(results)) => { tx.send(AppEvent::SearchResults(results)).ok(); }
-                        Ok(Err(e)) => { tx.send(AppEvent::Error(format!("Search error: {e}"))).ok(); }
-                        Err(e) => { tx.send(AppEvent::Error(format!("Search task: {e}"))).ok(); }
+                        Ok(Ok(results)) => {
+                            tx.send(AppEvent::SearchResults(results)).ok();
+                        }
+                        Ok(Err(e)) => {
+                            tx.send(AppEvent::Error(format!("Search error: {e}"))).ok();
+                        }
+                        Err(e) => {
+                            tx.send(AppEvent::Error(format!("Search task: {e}"))).ok();
+                        }
                     }
                 });
             }
@@ -558,7 +612,10 @@ fn handle_chat(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                         .unwrap_or_default();
                         tx.send(AppEvent::KazamKbContextLoaded(pages_text)).ok();
                     });
-                    state.set_status("KB context: ON (loading…)".into(), crate::app::StatusLevel::Info);
+                    state.set_status(
+                        "KB context: ON (loading…)".into(),
+                        crate::app::StatusLevel::Info,
+                    );
                 } else {
                     state.chat_kazam_context = false;
                     state.set_status(
@@ -584,7 +641,9 @@ fn handle_chat(state: &mut AppState, key: KeyEvent) -> Result<Action> {
             state.chat_messages.clear();
         }
         KeyCode::Char(c) => state.chat_input.push(c),
-        KeyCode::Backspace => { state.chat_input.pop(); }
+        KeyCode::Backspace => {
+            state.chat_input.pop();
+        }
         _ => {}
     }
     Ok(Action::Continue)
@@ -655,7 +714,12 @@ fn handle_git(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         KeyCode::Char('p') => {
             let tx = state.tx.clone();
             let notes_dir = state.notes_dir.clone();
-            let remote = state.config.git.remote.clone().unwrap_or_else(|| "origin".into());
+            let remote = state
+                .config
+                .git
+                .remote
+                .clone()
+                .unwrap_or_else(|| "origin".into());
             let git_username = state.config.git.git_username.clone();
             let git_token = state.config.git.git_token.clone();
             state.git_loading = true;
@@ -664,7 +728,13 @@ fn handle_git(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                     let repo = git2::Repository::open(&notes_dir)?;
                     let branch = repo.head()?.shorthand().unwrap_or("main").to_string();
                     drop(repo);
-                    crate::git::operations::push(&notes_dir, &remote, &branch, git_username, git_token)
+                    crate::git::operations::push(
+                        &notes_dir,
+                        &remote,
+                        &branch,
+                        git_username,
+                        git_token,
+                    )
                 })
                 .await;
                 let mapped = match result {
@@ -678,7 +748,12 @@ fn handle_git(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         KeyCode::Char('P') => {
             let tx = state.tx.clone();
             let notes_dir = state.notes_dir.clone();
-            let remote = state.config.git.remote.clone().unwrap_or_else(|| "origin".into());
+            let remote = state
+                .config
+                .git
+                .remote
+                .clone()
+                .unwrap_or_else(|| "origin".into());
             let git_username = state.config.git.git_username.clone();
             let git_token = state.config.git.git_token.clone();
             tokio::spawn(async move {
@@ -686,7 +761,13 @@ fn handle_git(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                     let repo = git2::Repository::open(&notes_dir)?;
                     let branch = repo.head()?.shorthand().unwrap_or("main").to_string();
                     drop(repo);
-                    crate::git::operations::pull(&notes_dir, &remote, &branch, git_username, git_token)
+                    crate::git::operations::pull(
+                        &notes_dir,
+                        &remote,
+                        &branch,
+                        git_username,
+                        git_token,
+                    )
                 })
                 .await;
                 let mapped = match result {
@@ -709,7 +790,12 @@ fn handle_new_note(state: &mut AppState, key: KeyEvent) -> Result<Action> {
             state.return_to_previous();
         }
         KeyCode::Enter => {
-            let name = state.prompt_input.drain(..).collect::<String>().trim().to_string();
+            let name = state
+                .prompt_input
+                .drain(..)
+                .collect::<String>()
+                .trim()
+                .to_string();
             if !name.is_empty() {
                 let filename = if name.ends_with(".md") {
                     name
@@ -723,7 +809,8 @@ fn handle_new_note(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                         if n.is_dir {
                             n.path.clone()
                         } else {
-                            n.path.parent()
+                            n.path
+                                .parent()
                                 .map(|p| p.to_path_buf())
                                 .unwrap_or_else(|| state.notes_dir.clone())
                         }
@@ -763,7 +850,9 @@ fn handle_new_note(state: &mut AppState, key: KeyEvent) -> Result<Action> {
             }
         }
         KeyCode::Char(c) => state.prompt_input.push(c),
-        KeyCode::Backspace => { state.prompt_input.pop(); }
+        KeyCode::Backspace => {
+            state.prompt_input.pop();
+        }
         _ => {}
     }
     Ok(Action::Continue)
@@ -776,7 +865,12 @@ fn handle_git_commit_input(state: &mut AppState, key: KeyEvent) -> Result<Action
             state.mode = Mode::Git;
         }
         KeyCode::Enter => {
-            let msg = state.prompt_input.drain(..).collect::<String>().trim().to_string();
+            let msg = state
+                .prompt_input
+                .drain(..)
+                .collect::<String>()
+                .trim()
+                .to_string();
             if !msg.is_empty() {
                 let tx = state.tx.clone();
                 let notes_dir = state.notes_dir.clone();
@@ -797,7 +891,9 @@ fn handle_git_commit_input(state: &mut AppState, key: KeyEvent) -> Result<Action
             }
         }
         KeyCode::Char(c) => state.prompt_input.push(c),
-        KeyCode::Backspace => { state.prompt_input.pop(); }
+        KeyCode::Backspace => {
+            state.prompt_input.pop();
+        }
         _ => {}
     }
     Ok(Action::Continue)
@@ -831,10 +927,15 @@ async fn handle_meetily(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                     .await;
                     match result {
                         Ok(Ok((path, meetily_id))) => {
-                            tx.send(AppEvent::MeetilyImportDone { path, meetily_id }).ok();
+                            tx.send(AppEvent::MeetilyImportDone { path, meetily_id })
+                                .ok();
                         }
-                        Ok(Err(e)) => { tx.send(AppEvent::Error(format!("Import failed: {e}"))).ok(); }
-                        Err(e) => { tx.send(AppEvent::Error(format!("Import task: {e}"))).ok(); }
+                        Ok(Err(e)) => {
+                            tx.send(AppEvent::Error(format!("Import failed: {e}"))).ok();
+                        }
+                        Err(e) => {
+                            tx.send(AppEvent::Error(format!("Import task: {e}"))).ok();
+                        }
                     }
                 });
             }
@@ -886,7 +987,11 @@ async fn handle_kazam_kb(state: &mut AppState, key: KeyEvent) -> Result<Action> 
         .kazam_kb
         .entries
         .iter()
-        .filter(|p| filter.is_empty() || p.title.to_lowercase().contains(&filter) || p.slug.contains(&filter))
+        .filter(|p| {
+            filter.is_empty()
+                || p.title.to_lowercase().contains(&filter)
+                || p.slug.contains(&filter)
+        })
         .count();
 
     match key.code {
@@ -951,9 +1056,15 @@ async fn handle_kazam_kb(state: &mut AppState, key: KeyEvent) -> Result<Action> 
                         })
                         .await;
                         match result {
-                            Ok(Ok(path)) => { tx.send(AppEvent::KazamImportDone(path)).ok(); }
-                            Ok(Err(e)) => { tx.send(AppEvent::Error(format!("Kazam import: {e}"))).ok(); }
-                            Err(e) => { tx.send(AppEvent::Error(format!("Kazam task: {e}"))).ok(); }
+                            Ok(Ok(path)) => {
+                                tx.send(AppEvent::KazamImportDone(path)).ok();
+                            }
+                            Ok(Err(e)) => {
+                                tx.send(AppEvent::Error(format!("Kazam import: {e}"))).ok();
+                            }
+                            Err(e) => {
+                                tx.send(AppEvent::Error(format!("Kazam task: {e}"))).ok();
+                            }
                         }
                     });
                     state.mode = Mode::Normal;
@@ -977,7 +1088,13 @@ async fn handle_annotations(state: &mut AppState, key: KeyEvent) -> Result<Actio
                 state.annotation.input.clear();
             }
             KeyCode::Enter => {
-                let text = state.annotation.input.drain(..).collect::<String>().trim().to_string();
+                let text = state
+                    .annotation
+                    .input
+                    .drain(..)
+                    .collect::<String>()
+                    .trim()
+                    .to_string();
                 if !text.is_empty() {
                     let ann = crate::notes::annotations::Annotation {
                         id: crate::notes::annotations::new_annotation_id(),
@@ -1008,17 +1125,21 @@ async fn handle_annotations(state: &mut AppState, key: KeyEvent) -> Result<Actio
                                 tx.send(AppEvent::AnnotationSaved(slug)).ok();
                             }
                             Ok(Err(e)) => {
-                                tx.send(AppEvent::Error(format!("Annotation save: {e}"))).ok();
+                                tx.send(AppEvent::Error(format!("Annotation save: {e}")))
+                                    .ok();
                             }
                             Err(e) => {
-                                tx.send(AppEvent::Error(format!("Annotation task: {e}"))).ok();
+                                tx.send(AppEvent::Error(format!("Annotation task: {e}")))
+                                    .ok();
                             }
                         }
                     });
                 }
             }
             KeyCode::Char(c) => state.annotation.input.push(c),
-            KeyCode::Backspace => { state.annotation.input.pop(); }
+            KeyCode::Backspace => {
+                state.annotation.input.pop();
+            }
             _ => {}
         }
         return Ok(Action::Continue);
@@ -1042,7 +1163,12 @@ async fn handle_annotations(state: &mut AppState, key: KeyEvent) -> Result<Actio
             state.annotation.composing = true;
         }
         KeyCode::Char('i') => {
-            if let Some(ann) = state.annotation.entries.get(state.annotation.cursor).cloned() {
+            if let Some(ann) = state
+                .annotation
+                .entries
+                .get(state.annotation.cursor)
+                .cloned()
+            {
                 let mut updated = ann.clone();
                 updated.status = crate::notes::annotations::AnnotationStatus::Incorporated;
                 let slug = state.annotation.slug.clone();
@@ -1051,7 +1177,8 @@ async fn handle_annotations(state: &mut AppState, key: KeyEvent) -> Result<Actio
                 let tx = state.tx.clone();
                 tokio::spawn(async move {
                     tokio::task::spawn_blocking(move || {
-                        crate::notes::annotations::save_annotation(&notes_dir, &slug2, &updated).ok();
+                        crate::notes::annotations::save_annotation(&notes_dir, &slug2, &updated)
+                            .ok();
                     })
                     .await
                     .ok();
@@ -1060,7 +1187,12 @@ async fn handle_annotations(state: &mut AppState, key: KeyEvent) -> Result<Actio
             }
         }
         KeyCode::Char('d') => {
-            if let Some(ann) = state.annotation.entries.get(state.annotation.cursor).cloned() {
+            if let Some(ann) = state
+                .annotation
+                .entries
+                .get(state.annotation.cursor)
+                .cloned()
+            {
                 let mut updated = ann.clone();
                 updated.status = crate::notes::annotations::AnnotationStatus::Ignored;
                 let slug = state.annotation.slug.clone();
@@ -1069,7 +1201,8 @@ async fn handle_annotations(state: &mut AppState, key: KeyEvent) -> Result<Actio
                 let tx = state.tx.clone();
                 tokio::spawn(async move {
                     tokio::task::spawn_blocking(move || {
-                        crate::notes::annotations::save_annotation(&notes_dir, &slug2, &updated).ok();
+                        crate::notes::annotations::save_annotation(&notes_dir, &slug2, &updated)
+                            .ok();
                     })
                     .await
                     .ok();
@@ -1102,12 +1235,15 @@ async fn handle_confirm_delete(state: &mut AppState, key: KeyEvent) -> Result<Ac
                         tx.send(AppEvent::NoteDeleted(path.clone())).ok();
 
                         // Remove from FTS index
-                        let rel = path.strip_prefix(&notes_dir)
+                        let rel = path
+                            .strip_prefix(&notes_dir)
                             .unwrap_or(&path)
                             .to_string_lossy()
                             .to_string();
                         tokio::task::spawn_blocking(move || {
-                            if let Ok(idx) = crate::search::fulltext::FtsIndex::open_or_create(&index_dir) {
+                            if let Ok(idx) =
+                                crate::search::fulltext::FtsIndex::open_or_create(&index_dir)
+                            {
                                 idx.delete_note(&rel).ok();
                             }
                         })
@@ -1158,13 +1294,11 @@ fn handle_settings_nav(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         KeyCode::Char('k') | KeyCode::Up => {
             state.settings_cursor = state.settings_cursor.saturating_sub(1);
         }
-        KeyCode::Tab | KeyCode::Left | KeyCode::Right => {
-            match state.settings_cursor {
-                sp::FIELD_CHAT_PROVIDER => sp::cycle_chat_provider(state),
-                sp::FIELD_EMBED_PROVIDER => sp::cycle_embed_provider(state),
-                _ => {}
-            }
-        }
+        KeyCode::Tab | KeyCode::Left | KeyCode::Right => match state.settings_cursor {
+            sp::FIELD_CHAT_PROVIDER => sp::cycle_chat_provider(state),
+            sp::FIELD_EMBED_PROVIDER => sp::cycle_embed_provider(state),
+            _ => {}
+        },
         KeyCode::Enter => {
             if sp::is_provider_field(state.settings_cursor) {
                 match state.settings_cursor {
@@ -1192,7 +1326,11 @@ fn handle_settings_nav(state: &mut AppState, key: KeyEvent) -> Result<Action> {
                 state.settings_mode = SettingsMode::EditingText;
             }
         }
-        KeyCode::Char('s') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+        KeyCode::Char('s')
+            if key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL) =>
+        {
             state.config.write().ok();
             state.set_status("Settings saved".into(), crate::app::StatusLevel::Success);
         }
@@ -1248,9 +1386,15 @@ fn handle_settings_pick(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         }
         KeyCode::Enter => {
             let selected = if sp::uses_ollama_models(state.settings_cursor) {
-                state.available_ollama_models.get(state.settings_model_cursor).cloned()
+                state
+                    .available_ollama_models
+                    .get(state.settings_model_cursor)
+                    .cloned()
             } else {
-                state.available_openai_models.get(state.settings_model_cursor).cloned()
+                state
+                    .available_openai_models
+                    .get(state.settings_model_cursor)
+                    .cloned()
             };
             if let Some(model) = selected {
                 sp::apply_field_value(state, state.settings_cursor, model);
@@ -1272,7 +1416,9 @@ fn handle_settings_edit_long(state: &mut AppState, key: KeyEvent) -> Result<Acti
         }
         _ => {
             // Ctrl+s also saves without closing.
-            if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL)
+            if key
+                .modifiers
+                .contains(crossterm::event::KeyModifiers::CONTROL)
                 && key.code == KeyCode::Char('s')
             {
                 let prompt = state.settings_prompt_editor.lines().join("\n");

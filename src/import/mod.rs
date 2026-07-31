@@ -10,13 +10,13 @@ use crate::{config::ImportConfig, notes::frontmatter};
 
 /// Convert a file in the inbox into a properly frontmattered .md note.
 /// Returns the destination path on success.
-pub fn process_inbox_file(
-    src: &Path,
-    notes_dir: &Path,
-    subdir: Option<&str>,
-) -> Result<PathBuf> {
+pub fn process_inbox_file(src: &Path, notes_dir: &Path, subdir: Option<&str>) -> Result<PathBuf> {
     let ext = src.extension().and_then(|e| e.to_str()).unwrap_or("");
-    let stem = src.file_stem().unwrap_or_default().to_string_lossy().to_string();
+    let stem = src
+        .file_stem()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
 
     let (body, title) = match ext {
         "md" | "markdown" => {
@@ -59,7 +59,13 @@ pub fn process_inbox_file(
 
 pub fn sanitize_filename(name: &str) -> String {
     name.chars()
-        .map(|c| if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' { c } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() || c == '-' || c == '_' || c == ' ' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect::<String>()
         .trim()
         .replace(' ', "-")

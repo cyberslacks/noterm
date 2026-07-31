@@ -6,9 +6,9 @@ use ratatui::{
     Frame,
 };
 
+use super::search_overlay::centered_rect;
 use crate::app::AppState;
 use crate::notes::annotations::AnnotationStatus;
-use super::search_overlay::centered_rect;
 
 pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
     let popup = centered_rect(75, 70, area);
@@ -57,10 +57,7 @@ pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
                         format!("  [{}]", ann.added),
                         Style::default().fg(Color::DarkGray),
                     ),
-                    Span::styled(
-                        format!("  {}", ann.text),
-                        Style::default().fg(Color::White),
-                    ),
+                    Span::styled(format!("  {}", ann.text), Style::default().fg(Color::White)),
                 ]))
             })
             .collect();

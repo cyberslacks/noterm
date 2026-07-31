@@ -5,8 +5,8 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::{AppState, Mode};
 use super::search_overlay::centered_rect;
+use crate::app::{AppState, Mode};
 
 pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
     let popup = centered_rect(80, 75, area);

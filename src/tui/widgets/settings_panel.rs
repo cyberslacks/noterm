@@ -6,9 +6,9 @@ use ratatui::{
     Frame,
 };
 
+use super::search_overlay::centered_rect;
 use crate::app::{AppState, SettingsMode};
 use crate::config::{EmbedProvider, LlmProvider};
-use super::search_overlay::centered_rect;
 
 /// Max chars shown for the system prompt preview in the list row.
 const PROMPT_PREVIEW_LEN: usize = 55;
@@ -132,7 +132,9 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
     f.render_widget(ratatui::widgets::Clear, popup);
 
     let outer = Block::default()
-        .title(" Settings  (j/k navigate  Tab/←→ cycle  Enter edit  r re-embed all  Esc save+close) ")
+        .title(
+            " Settings  (j/k navigate  Tab/←→ cycle  Enter edit  r re-embed all  Esc save+close) ",
+        )
         .borders(Borders::ALL)
         .border_type(BorderType::Double)
         .border_style(Style::default().fg(Color::Cyan));
@@ -141,8 +143,8 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
     f.render_widget(outer, popup);
 
     // Split into left (settings list) and right (model picker / help)
-    let picker_visible = state.settings_mode == SettingsMode::PickingModel
-        && is_model_field(state.settings_cursor);
+    let picker_visible =
+        state.settings_mode == SettingsMode::PickingModel && is_model_field(state.settings_cursor);
 
     let h_chunks = if picker_visible {
         Layout::default()
@@ -180,39 +182,165 @@ fn render_settings_list(f: &mut Frame, area: Rect, state: &AppState) {
     }
 
     let rows = vec![
-        Row { label: "── Chat ──────────────────────────".into(), value: String::new(), field_idx: None, is_header: true },
-        Row { label: "  Chat Provider".into(),     value: cfg.provider.to_string(),                                         field_idx: Some(FIELD_CHAT_PROVIDER),     is_header: false },
-        Row { label: "── Ollama ────────────────────────".into(), value: String::new(), field_idx: None, is_header: true },
-        Row { label: "  URL".into(),               value: cfg.ollama_base_url.clone(),                                      field_idx: Some(FIELD_OLLAMA_URL),        is_header: false },
-        Row { label: "  Chat Model".into(),        value: cfg.ollama_chat_model.clone(),                                    field_idx: Some(FIELD_OLLAMA_CHAT_MODEL), is_header: false },
-        Row { label: "── OpenAI / WebUI ────────────────".into(), value: String::new(), field_idx: None, is_header: true },
-        Row { label: "  URL".into(),               value: cfg.openai_base_url.clone(),                                      field_idx: Some(FIELD_OPENAI_URL),        is_header: false },
-        Row { label: "  API Key".into(),           value: mask_key(&cfg.openai_api_key.clone().unwrap_or_default()),        field_idx: Some(FIELD_OPENAI_API_KEY),    is_header: false },
-        Row { label: "  Chat Model".into(),        value: cfg.openai_model.clone(),                                         field_idx: Some(FIELD_OPENAI_CHAT_MODEL), is_header: false },
-        Row { label: "── Claude ────────────────────────".into(), value: String::new(), field_idx: None, is_header: true },
-        Row { label: "  Model".into(),             value: cfg.claude_model.clone(),                                         field_idx: Some(FIELD_CLAUDE_MODEL),      is_header: false },
-        Row { label: "  API Key".into(),           value: mask_key(&cfg.claude_api_key.clone().unwrap_or_default()),        field_idx: Some(FIELD_CLAUDE_API_KEY),    is_header: false },
-        Row { label: "── Embeddings ────────────────────".into(), value: String::new(), field_idx: None, is_header: true },
-        Row { label: "  Embed Provider".into(),    value: cfg.embed_provider.to_string(),                                   field_idx: Some(FIELD_EMBED_PROVIDER),    is_header: false },
-        Row { label: "  Ollama Embed Model".into(),value: cfg.ollama_embed_model.clone(),                                   field_idx: Some(FIELD_OLLAMA_EMBED_MODEL),is_header: false },
-        Row { label: "  OpenAI Embed Model".into(),value: cfg.openai_embed_model.clone(),                                   field_idx: Some(FIELD_OPENAI_EMBED_MODEL),is_header: false },
-        Row { label: "── Summarizer (X key) ────────────".into(), value: String::new(), field_idx: None, is_header: true },
-        Row { label: "  URL".into(),               value: scfg.base_url.clone(),                                            field_idx: Some(FIELD_SUMMARIZER_URL),    is_header: false },
-        Row { label: "  API Key".into(),           value: mask_key(&scfg.api_key.clone().unwrap_or_default()),              field_idx: Some(FIELD_SUMMARIZER_API_KEY),is_header: false },
-        Row { label: "  Model".into(),             value: scfg.model.clone(),                                               field_idx: Some(FIELD_SUMMARIZER_MODEL),  is_header: false },
-        Row { label: "  Prompt".into(),            value: truncate_prompt(&scfg.system_prompt),                             field_idx: Some(FIELD_SUMMARIZER_PROMPT), is_header: false },
-        Row { label: "── Git Credentials (HTTPS) ────────".into(), value: String::new(), field_idx: None, is_header: true },
-        Row { label: "  Username".into(),          value: state.config.git.git_username.clone().unwrap_or_else(|| "(not set)".into()), field_idx: Some(FIELD_GIT_USERNAME), is_header: false },
-        Row { label: "  Token / Password".into(),  value: mask_key(&state.config.git.git_token.clone().unwrap_or_default()),            field_idx: Some(FIELD_GIT_TOKEN),   is_header: false },
+        Row {
+            label: "── Chat ──────────────────────────".into(),
+            value: String::new(),
+            field_idx: None,
+            is_header: true,
+        },
+        Row {
+            label: "  Chat Provider".into(),
+            value: cfg.provider.to_string(),
+            field_idx: Some(FIELD_CHAT_PROVIDER),
+            is_header: false,
+        },
+        Row {
+            label: "── Ollama ────────────────────────".into(),
+            value: String::new(),
+            field_idx: None,
+            is_header: true,
+        },
+        Row {
+            label: "  URL".into(),
+            value: cfg.ollama_base_url.clone(),
+            field_idx: Some(FIELD_OLLAMA_URL),
+            is_header: false,
+        },
+        Row {
+            label: "  Chat Model".into(),
+            value: cfg.ollama_chat_model.clone(),
+            field_idx: Some(FIELD_OLLAMA_CHAT_MODEL),
+            is_header: false,
+        },
+        Row {
+            label: "── OpenAI / WebUI ────────────────".into(),
+            value: String::new(),
+            field_idx: None,
+            is_header: true,
+        },
+        Row {
+            label: "  URL".into(),
+            value: cfg.openai_base_url.clone(),
+            field_idx: Some(FIELD_OPENAI_URL),
+            is_header: false,
+        },
+        Row {
+            label: "  API Key".into(),
+            value: mask_key(&cfg.openai_api_key.clone().unwrap_or_default()),
+            field_idx: Some(FIELD_OPENAI_API_KEY),
+            is_header: false,
+        },
+        Row {
+            label: "  Chat Model".into(),
+            value: cfg.openai_model.clone(),
+            field_idx: Some(FIELD_OPENAI_CHAT_MODEL),
+            is_header: false,
+        },
+        Row {
+            label: "── Claude ────────────────────────".into(),
+            value: String::new(),
+            field_idx: None,
+            is_header: true,
+        },
+        Row {
+            label: "  Model".into(),
+            value: cfg.claude_model.clone(),
+            field_idx: Some(FIELD_CLAUDE_MODEL),
+            is_header: false,
+        },
+        Row {
+            label: "  API Key".into(),
+            value: mask_key(&cfg.claude_api_key.clone().unwrap_or_default()),
+            field_idx: Some(FIELD_CLAUDE_API_KEY),
+            is_header: false,
+        },
+        Row {
+            label: "── Embeddings ────────────────────".into(),
+            value: String::new(),
+            field_idx: None,
+            is_header: true,
+        },
+        Row {
+            label: "  Embed Provider".into(),
+            value: cfg.embed_provider.to_string(),
+            field_idx: Some(FIELD_EMBED_PROVIDER),
+            is_header: false,
+        },
+        Row {
+            label: "  Ollama Embed Model".into(),
+            value: cfg.ollama_embed_model.clone(),
+            field_idx: Some(FIELD_OLLAMA_EMBED_MODEL),
+            is_header: false,
+        },
+        Row {
+            label: "  OpenAI Embed Model".into(),
+            value: cfg.openai_embed_model.clone(),
+            field_idx: Some(FIELD_OPENAI_EMBED_MODEL),
+            is_header: false,
+        },
+        Row {
+            label: "── Summarizer (X key) ────────────".into(),
+            value: String::new(),
+            field_idx: None,
+            is_header: true,
+        },
+        Row {
+            label: "  URL".into(),
+            value: scfg.base_url.clone(),
+            field_idx: Some(FIELD_SUMMARIZER_URL),
+            is_header: false,
+        },
+        Row {
+            label: "  API Key".into(),
+            value: mask_key(&scfg.api_key.clone().unwrap_or_default()),
+            field_idx: Some(FIELD_SUMMARIZER_API_KEY),
+            is_header: false,
+        },
+        Row {
+            label: "  Model".into(),
+            value: scfg.model.clone(),
+            field_idx: Some(FIELD_SUMMARIZER_MODEL),
+            is_header: false,
+        },
+        Row {
+            label: "  Prompt".into(),
+            value: truncate_prompt(&scfg.system_prompt),
+            field_idx: Some(FIELD_SUMMARIZER_PROMPT),
+            is_header: false,
+        },
+        Row {
+            label: "── Git Credentials (HTTPS) ────────".into(),
+            value: String::new(),
+            field_idx: None,
+            is_header: true,
+        },
+        Row {
+            label: "  Username".into(),
+            value: state
+                .config
+                .git
+                .git_username
+                .clone()
+                .unwrap_or_else(|| "(not set)".into()),
+            field_idx: Some(FIELD_GIT_USERNAME),
+            is_header: false,
+        },
+        Row {
+            label: "  Token / Password".into(),
+            value: mask_key(&state.config.git.git_token.clone().unwrap_or_default()),
+            field_idx: Some(FIELD_GIT_TOKEN),
+            is_header: false,
+        },
     ];
 
     let items: Vec<ListItem> = rows
         .iter()
         .map(|row| {
             if row.is_header {
-                return ListItem::new(Line::from(vec![
-                    Span::styled(row.label.clone(), Style::default().fg(Color::DarkGray)),
-                ]));
+                return ListItem::new(Line::from(vec![Span::styled(
+                    row.label.clone(),
+                    Style::default().fg(Color::DarkGray),
+                )]));
             }
 
             let is_focused = row.field_idx == Some(state.settings_cursor);
@@ -221,7 +349,9 @@ fn render_settings_list(f: &mut Frame, area: Rect, state: &AppState) {
 
             let cursor = if is_focused { "►" } else { " " };
             let cursor_style = if is_focused {
-                Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(Color::DarkGray)
             };
@@ -239,7 +369,9 @@ fn render_settings_list(f: &mut Frame, area: Rect, state: &AppState) {
             };
 
             let value_style = if is_editing {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
             } else if is_picking {
                 Style::default().fg(Color::Green)
             } else if is_focused {
@@ -277,7 +409,11 @@ fn render_model_picker(f: &mut Frame, area: Rect, state: &AppState) {
         &state.available_openai_models
     };
 
-    let source = if uses_ollama_models(state.settings_cursor) { "Ollama" } else { "OpenAI/WebUI" };
+    let source = if uses_ollama_models(state.settings_cursor) {
+        "Ollama"
+    } else {
+        "OpenAI/WebUI"
+    };
 
     let block = Block::default()
         .title(format!(" {source} Models "))
@@ -289,8 +425,7 @@ fn render_model_picker(f: &mut Frame, area: Rect, state: &AppState) {
 
     if models.is_empty() {
         f.render_widget(
-            Paragraph::new("(fetching models…)")
-                .style(Style::default().fg(Color::DarkGray)),
+            Paragraph::new("(fetching models…)").style(Style::default().fg(Color::DarkGray)),
             inner,
         );
         return;
@@ -302,7 +437,10 @@ fn render_model_picker(f: &mut Frame, area: Rect, state: &AppState) {
         .map(|(i, name)| {
             let selected = i == state.settings_model_cursor;
             let style = if selected {
-                Style::default().fg(Color::Black).bg(Color::Green).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Black)
+                    .bg(Color::Green)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default().fg(Color::White)
             };

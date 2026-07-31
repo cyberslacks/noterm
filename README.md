@@ -71,6 +71,21 @@ cargo build --release
 
 No system packages needed. `libgit2`, `libsqlite3`, and TLS are all compiled from source.
 
+### Desktop application (Tauri)
+
+The desktop application uses the same Rust services and configuration as the
+terminal client. It provides multi-vault Markdown editing with source/preview
+views and native configuration, MCP, and Fabric bridges.
+
+```bash
+cd desktop && npm install && cd ..
+cargo run --manifest-path src-tauri/Cargo.toml
+```
+
+For a production bundle, run `cargo tauri build --manifest-path src-tauri/Cargo.toml`
+after installing the Tauri CLI. The frontend production build is `npm run build`
+from `desktop/`.
+
 ## Quick Start
 
 noterm looks for notes in `~/notes/` by default. On first launch it creates the directory and a default config at `~/.config/noterm/config.toml`.

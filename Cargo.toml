@@ -21,7 +21,7 @@ async-trait = "0.1"
 futures = "0.3"
 
 # HTTP — rustls-tls avoids any OpenSSL system dependency (required for musl/windows cross-compilation)
-reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "blocking", "rustls-tls"] }
 
 # Git — vendored compiles libgit2+openssl from source so cross-compilation works without system OpenSSL
 git2 = { version = "0.19", features = ["vendored-libgit2", "vendored-openssl"] }

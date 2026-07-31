@@ -31,7 +31,12 @@ impl TaskStatus {
     }
 
     pub fn all() -> &'static [TaskStatus] {
-        &[TaskStatus::Todo, TaskStatus::InProgress, TaskStatus::Done, TaskStatus::Blocked]
+        &[
+            TaskStatus::Todo,
+            TaskStatus::InProgress,
+            TaskStatus::Done,
+            TaskStatus::Blocked,
+        ]
     }
 }
 

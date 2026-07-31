@@ -6,9 +6,9 @@ use ratatui::{
     Frame,
 };
 
+use super::search_overlay::centered_rect;
 use crate::app::AppState;
 use crate::notes::freshness::FreshnessStatus;
-use super::search_overlay::centered_rect;
 
 pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
     let popup = centered_rect(85, 80, area);
@@ -29,8 +29,8 @@ pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
         .split(inner);
 
     if state.kazam_kb.loading {
-        let loading = Paragraph::new("Scanning Kazam KB…")
-            .style(Style::default().fg(Color::DarkGray));
+        let loading =
+            Paragraph::new("Scanning Kazam KB…").style(Style::default().fg(Color::DarkGray));
         f.render_widget(loading, chunks[0]);
         render_filter_input(f, chunks[1], state);
         return;
@@ -74,19 +74,21 @@ pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
             ListItem::new(Line::from(vec![
                 Span::styled(
                     format!("{:<16}", status_str),
-                    Style::default().fg(status_color).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(status_color)
+                        .add_modifier(Modifier::BOLD),
                 ),
                 Span::styled(
                     format!("{:<30}", page.slug),
                     Style::default().fg(Color::DarkGray),
                 ),
-                Span::styled(
-                    page.title.clone(),
-                    Style::default().fg(Color::White),
-                ),
+                Span::styled(page.title.clone(), Style::default().fg(Color::White)),
                 imported_tag,
                 Span::styled(
-                    page.owner.as_deref().map(|o| format!("  {o}")).unwrap_or_default(),
+                    page.owner
+                        .as_deref()
+                        .map(|o| format!("  {o}"))
+                        .unwrap_or_default(),
                     Style::default().fg(Color::Cyan),
                 ),
             ]))

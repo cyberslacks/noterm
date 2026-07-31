@@ -17,7 +17,8 @@ pub async fn run_inbox_watcher(
 ) {
     // Ensure inbox dir exists
     if let Err(e) = std::fs::create_dir_all(&inbox_dir) {
-        tx.send(AppEvent::Error(format!("Cannot create inbox dir: {e}"))).ok();
+        tx.send(AppEvent::Error(format!("Cannot create inbox dir: {e}")))
+            .ok();
         return;
     }
 
@@ -41,14 +42,20 @@ async fn sweep_inbox(
     let tx2 = tx.clone();
 
     tokio::task::spawn_blocking(move || {
-        let Ok(entries) = std::fs::read_dir(&inbox) else { return };
+        let Ok(entries) = std::fs::read_dir(&inbox) else {
+            return;
+        };
 
         for entry in entries.flatten() {
             let path = entry.path();
-            if !path.is_file() { continue; }
+            if !path.is_file() {
+                continue;
+            }
 
             let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
-            if !matches!(ext, "md" | "markdown" | "txt") { continue; }
+            if !matches!(ext, "md" | "markdown" | "txt") {
+                continue;
+            }
 
             match super::process_inbox_file(&path, &notes_dir, Some("imported")) {
                 Ok(dest) => {
@@ -58,7 +65,11 @@ async fn sweep_inbox(
                     tx2.send(AppEvent::FileTreeRefresh(nodes)).ok();
                 }
                 Err(e) => {
-                    tx2.send(AppEvent::Error(format!("Import failed for {}: {e}", path.display()))).ok();
+                    tx2.send(AppEvent::Error(format!(
+                        "Import failed for {}: {e}",
+                        path.display()
+                    )))
+                    .ok();
                 }
             }
         }

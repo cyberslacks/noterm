@@ -1,5 +1,5 @@
-use anyhow::Result;
 use crate::{db::Db, notes::VectorSearchResult};
+use anyhow::Result;
 
 pub fn store_embedding(
     db: &Db,

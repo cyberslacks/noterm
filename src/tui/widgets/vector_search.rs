@@ -6,8 +6,8 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::AppState;
 use super::search_overlay::centered_rect;
+use crate::app::AppState;
 
 pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
     let popup = centered_rect(80, 60, area);
@@ -24,7 +24,11 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([Constraint::Length(1), Constraint::Length(1), Constraint::Min(0)])
+        .constraints([
+            Constraint::Length(1),
+            Constraint::Length(1),
+            Constraint::Min(0),
+        ])
         .split(inner);
 
     // Query input
@@ -38,7 +42,10 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
     // Loading indicator
     if state.vsearch_loading {
         f.render_widget(
-            Paragraph::new(Span::styled("  Searching...", Style::default().fg(Color::DarkGray))),
+            Paragraph::new(Span::styled(
+                "  Searching...",
+                Style::default().fg(Color::DarkGray),
+            )),
             chunks[1],
         );
     }
@@ -60,7 +67,11 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
         .collect();
 
     let list = List::new(items)
-        .highlight_style(Style::default().bg(Color::DarkGray).add_modifier(Modifier::BOLD))
+        .highlight_style(
+            Style::default()
+                .bg(Color::DarkGray)
+                .add_modifier(Modifier::BOLD),
+        )
         .highlight_symbol("▶ ");
 
     let mut list_state = ListState::default();

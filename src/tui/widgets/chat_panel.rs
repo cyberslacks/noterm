@@ -6,15 +6,18 @@ use ratatui::{
     Frame,
 };
 
-use crate::{
-    app::AppState,
-    llm::ChatRole,
-};
+use crate::{app::AppState, llm::ChatRole};
 
 pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
-    let kb_indicator = if state.chat_kazam_context { " [KB:ON]" } else { "" };
+    let kb_indicator = if state.chat_kazam_context {
+        " [KB:ON]"
+    } else {
+        ""
+    };
     let block = Block::default()
-        .title(format!(" LLM Chat{kb_indicator}  Tab=KB · Ctrl+l=clear · Esc=exit "))
+        .title(format!(
+            " LLM Chat{kb_indicator}  Tab=KB · Ctrl+l=clear · Esc=exit "
+        ))
         .borders(Borders::ALL)
         .border_type(BorderType::Rounded)
         .border_style(Style::default().fg(if state.chat_kazam_context {
@@ -39,16 +42,12 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
             let (prefix, style) = match msg.role {
                 ChatRole::User => (
                     "You: ",
-                    Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD),
+                    Style::default()
+                        .fg(Color::Cyan)
+                        .add_modifier(Modifier::BOLD),
                 ),
-                ChatRole::Assistant => (
-                    "AI:  ",
-                    Style::default().fg(Color::Green),
-                ),
-                ChatRole::System => (
-                    "Sys: ",
-                    Style::default().fg(Color::DarkGray),
-                ),
+                ChatRole::Assistant => ("AI:  ", Style::default().fg(Color::Green)),
+                ChatRole::System => ("Sys: ", Style::default().fg(Color::DarkGray)),
             };
 
             // Word-wrap message lines
@@ -61,7 +60,10 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
                 ])));
             }
             if lines.is_empty() {
-                lines.push(ListItem::new(Line::from(Span::styled(prefix.to_string(), style))));
+                lines.push(ListItem::new(Line::from(Span::styled(
+                    prefix.to_string(),
+                    style,
+                ))));
             }
             lines
         })

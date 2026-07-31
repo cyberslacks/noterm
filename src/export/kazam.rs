@@ -17,15 +17,13 @@ use std::path::{Path, PathBuf};
 use crate::notes::frontmatter::NoteFrontmatter;
 
 /// Build the YAML content for a Kazam page from noterm note data.
-pub fn note_to_kazam_yaml(
-    note_path: &Path,
-    body: &str,
-    frontmatter: &NoteFrontmatter,
-) -> String {
-    let title = frontmatter
-        .title
-        .as_deref()
-        .unwrap_or_else(|| note_path.file_stem().and_then(|s| s.to_str()).unwrap_or("untitled"));
+pub fn note_to_kazam_yaml(note_path: &Path, body: &str, frontmatter: &NoteFrontmatter) -> String {
+    let title = frontmatter.title.as_deref().unwrap_or_else(|| {
+        note_path
+            .file_stem()
+            .and_then(|s| s.to_str())
+            .unwrap_or("untitled")
+    });
 
     let mut lines = vec![
         format!("title: \"{}\"", title.replace('"', "'")),
@@ -49,7 +47,10 @@ pub fn note_to_kazam_yaml(
             lines.push(format!("  expires: \"{}\"", &exp[..10.min(exp.len())]));
         }
         if let Some(modified) = &frontmatter.modified {
-            lines.push(format!("  updated: \"{}\"", &modified[..10.min(modified.len())]));
+            lines.push(format!(
+                "  updated: \"{}\"",
+                &modified[..10.min(modified.len())]
+            ));
         }
     }
 

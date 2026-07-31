@@ -5,8 +5,8 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::AppState;
 use super::search_overlay::centered_rect;
+use crate::app::AppState;
 
 pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
     let popup = centered_rect(70, 85, area);
@@ -102,7 +102,10 @@ pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
         ("Esc", "Close KB browser"),
         ("", ""),
         ("Freshness frontmatter fields", ""),
-        ("review_every", "Cadence: 7d  2w  3m  1y  monthly  quarterly  yearly"),
+        (
+            "review_every",
+            "Cadence: 7d  2w  3m  1y  monthly  quarterly  yearly",
+        ),
         ("owner", "Who is responsible for reviewing this note"),
         ("expires", "Hard expiry date: YYYY-MM-DD"),
         ("sources_of_truth", "List of {label, href} reference links"),
@@ -121,16 +124,12 @@ pub fn render(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
             lines.push(Line::from(""));
         } else {
             lines.push(Line::from(vec![
-                Span::styled(
-                    format!("  {:<20}", key),
-                    Style::default().fg(Color::Yellow),
-                ),
+                Span::styled(format!("  {:<20}", key), Style::default().fg(Color::Yellow)),
                 Span::raw(desc.to_string()),
             ]));
         }
     }
 
-    let para = Paragraph::new(Text::from(lines))
-        .scroll((state.help_scroll as u16, 0));
+    let para = Paragraph::new(Text::from(lines)).scroll((state.help_scroll as u16, 0));
     f.render_widget(para, inner);
 }

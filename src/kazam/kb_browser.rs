@@ -83,8 +83,12 @@ pub fn scan_kb(kb_path: &Path, notes_dir: &Path, import_folder: &str) -> Vec<Kaz
             continue;
         }
 
-        let Ok(content) = std::fs::read_to_string(&path) else { continue };
-        let Ok(page_yaml) = serde_yaml::from_str::<KazamPageYaml>(&content) else { continue };
+        let Ok(content) = std::fs::read_to_string(&path) else {
+            continue;
+        };
+        let Ok(page_yaml) = serde_yaml::from_str::<KazamPageYaml>(&content) else {
+            continue;
+        };
 
         let slug = crate::import::sanitize_filename(&stem);
         let title = if page_yaml.title.is_empty() {
@@ -93,7 +97,10 @@ pub fn scan_kb(kb_path: &Path, notes_dir: &Path, import_folder: &str) -> Vec<Kaz
             page_yaml.title.clone()
         };
 
-        let review_every = page_yaml.freshness.as_ref().and_then(|f| f.review_every.clone());
+        let review_every = page_yaml
+            .freshness
+            .as_ref()
+            .and_then(|f| f.review_every.clone());
         let freshness_status = page_yaml.freshness.as_ref().and_then(|f| {
             let info = freshness::compute(
                 f.updated.as_deref(),

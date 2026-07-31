@@ -39,7 +39,9 @@ impl MeetilyMeeting {
     /// Human-readable duration string e.g. "1h 23m" or "45m"
     pub fn duration_display(&self) -> String {
         let secs = self.duration_secs.unwrap_or(0.0) as u64;
-        if secs == 0 { return String::new(); }
+        if secs == 0 {
+            return String::new();
+        }
         let h = secs / 3600;
         let m = (secs % 3600) / 60;
         match (h, m) {
@@ -61,7 +63,9 @@ impl MeetilyMeeting {
 /// Find the Meetily DB. Returns `None` if no DB can be located.
 pub fn find_db(config: &MeetilyConfig) -> Option<PathBuf> {
     if let Some(ref p) = config.db_path {
-        if p.exists() { return Some(p.clone()); }
+        if p.exists() {
+            return Some(p.clone());
+        }
     }
 
     let candidates: Vec<PathBuf> = vec![
@@ -136,9 +140,8 @@ pub fn load_meetings(db_path: &std::path::Path) -> Result<Vec<MeetilyMeeting>> {
         .unwrap_or(0)
         > 0;
 
-    let mut stmt = conn.prepare(
-        "SELECT id, title, created_at FROM meetings ORDER BY created_at DESC",
-    )?;
+    let mut stmt =
+        conn.prepare("SELECT id, title, created_at FROM meetings ORDER BY created_at DESC")?;
 
     let meetings: Vec<MeetilyMeeting> = stmt
         .query_map([], |row| {
@@ -152,9 +155,12 @@ pub fn load_meetings(db_path: &std::path::Path) -> Result<Vec<MeetilyMeeting>> {
         .map(|(id, title, created_at)| {
             let (transcript, summary, action_items, key_points, duration, user_notes) =
                 fetch_meeting_content(
-                    &conn, &id,
-                    has_transcripts, has_summary_processes,
-                    has_meeting_notes, has_speaker,
+                    &conn,
+                    &id,
+                    has_transcripts,
+                    has_summary_processes,
+                    has_meeting_notes,
+                    has_speaker,
                 )
                 .unwrap_or_default();
 
@@ -182,7 +188,14 @@ fn fetch_meeting_content(
     has_summary_processes: bool,
     has_meeting_notes: bool,
     has_speaker: bool,
-) -> Result<(Option<String>, Option<String>, Option<String>, Option<String>, Option<f64>, Option<String>)> {
+) -> Result<(
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<f64>,
+    Option<String>,
+)> {
     let mut transcript_text: Option<String> = None;
     let mut summary: Option<String> = None;
     let mut action_items: Option<String> = None;
@@ -200,8 +213,16 @@ fn fetch_meeting_content(
         };
 
         let mut stmt = conn.prepare(sql)?;
-        let segments: Vec<(String, Option<String>, Option<String>, Option<String>, Option<f64>, Option<f64>, Option<String>)> =
-            stmt.query_map([meeting_id], |r| {
+        let segments: Vec<(
+            String,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<f64>,
+            Option<f64>,
+            Option<String>,
+        )> = stmt
+            .query_map([meeting_id], |r| {
                 Ok((
                     r.get::<_, String>(0).unwrap_or_default(),
                     r.get::<_, Option<String>>(1)?,
@@ -218,7 +239,9 @@ fn fetch_meeting_content(
         if !segments.is_empty() {
             let mut lines: Vec<String> = Vec::new();
             for (text, _, _, _, start, _, speaker) in &segments {
-                let ts_part = start.map(|s| format!("[{}] ", format_timestamp(s))).unwrap_or_default();
+                let ts_part = start
+                    .map(|s| format!("[{}] ", format_timestamp(s)))
+                    .unwrap_or_default();
                 let spk_part = match speaker.as_deref() {
                     Some("mic") => "**Mic** ",
                     Some("system") => "**System** ",
@@ -229,10 +252,18 @@ fn fetch_meeting_content(
             transcript_text = Some(lines.join("\n\n"));
 
             for (_, seg_summary, seg_actions, seg_keys, _, end, _) in &segments {
-                if seg_summary.is_some() { summary = seg_summary.clone(); }
-                if seg_actions.is_some() { action_items = seg_actions.clone(); }
-                if seg_keys.is_some() { key_points = seg_keys.clone(); }
-                if let Some(e) = end { total_duration = Some(*e); }
+                if seg_summary.is_some() {
+                    summary = seg_summary.clone();
+                }
+                if seg_actions.is_some() {
+                    action_items = seg_actions.clone();
+                }
+                if seg_keys.is_some() {
+                    key_points = seg_keys.clone();
+                }
+                if let Some(e) = end {
+                    total_duration = Some(*e);
+                }
             }
         }
     }
@@ -249,11 +280,15 @@ fn fetch_meeting_content(
                     summary = v["summary"].as_str().map(String::from);
                 }
                 if action_items.is_none() {
-                    action_items = v["action_items"].as_str().map(String::from)
+                    action_items = v["action_items"]
+                        .as_str()
+                        .map(String::from)
                         .or_else(|| json_array_to_lines(&v["action_items"]));
                 }
                 if key_points.is_none() {
-                    key_points = v["key_points"].as_str().map(String::from)
+                    key_points = v["key_points"]
+                        .as_str()
+                        .map(String::from)
                         .or_else(|| json_array_to_lines(&v["key_points"]));
                 }
             }
@@ -271,7 +306,14 @@ fn fetch_meeting_content(
         }
     }
 
-    Ok((transcript_text, summary, action_items, key_points, total_duration, user_notes))
+    Ok((
+        transcript_text,
+        summary,
+        action_items,
+        key_points,
+        total_duration,
+        user_notes,
+    ))
 }
 
 /// Convert a JSON array of strings to newline-separated bullets
@@ -310,7 +352,11 @@ pub fn render_note(meeting: &MeetilyMeeting, tags: &[String]) -> String {
     let tags_yaml = if tags.is_empty() {
         String::new()
     } else {
-        let items = tags.iter().map(|t| format!("\"{t}\"")).collect::<Vec<_>>().join(", ");
+        let items = tags
+            .iter()
+            .map(|t| format!("\"{t}\""))
+            .collect::<Vec<_>>()
+            .join(", ");
         format!("tags: [{items}]\n")
     };
 
@@ -326,9 +372,8 @@ pub fn render_note(meeting: &MeetilyMeeting, tags: &[String]) -> String {
     );
 
     // Header
-    let mut body = format!(
-        "\n# {title}\n\n> **Call Note** · {date_display}{duration_line}\n\n---\n\n"
-    );
+    let mut body =
+        format!("\n# {title}\n\n> **Call Note** · {date_display}{duration_line}\n\n---\n\n");
 
     // Summary section
     body.push_str("## Summary\n\n");

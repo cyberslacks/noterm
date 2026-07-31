@@ -6,8 +6,8 @@ use ratatui::{
     Frame,
 };
 
-use crate::app::AppState;
 use super::search_overlay::centered_rect;
+use crate::app::AppState;
 
 pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
     let popup = centered_rect(75, 70, area);
@@ -32,7 +32,11 @@ pub fn render(f: &mut Frame, area: Rect, state: &AppState) {
     let tabs = Tabs::new(tab_titles.map(|t| t.to_string()).to_vec())
         .select(state.git_selected_tab)
         .style(Style::default().fg(Color::DarkGray))
-        .highlight_style(Style::default().fg(Color::White).add_modifier(Modifier::BOLD));
+        .highlight_style(
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        );
     f.render_widget(tabs, chunks[0]);
 
     match state.git_selected_tab {
@@ -48,25 +52,39 @@ fn render_status(f: &mut Frame, area: Rect, state: &AppState) {
 
         let branch_line = ListItem::new(Line::from(vec![
             Span::styled("Branch: ", Style::default().fg(Color::DarkGray)),
-            Span::styled(status.branch.clone(), Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)),
+            Span::styled(
+                status.branch.clone(),
+                Style::default()
+                    .fg(Color::Cyan)
+                    .add_modifier(Modifier::BOLD),
+            ),
         ]));
         items.push(branch_line);
         items.push(ListItem::new(""));
 
         if !status.staged.is_empty() {
-            items.push(ListItem::new(Span::styled("Staged:", Style::default().fg(Color::Green))));
+            items.push(ListItem::new(Span::styled(
+                "Staged:",
+                Style::default().fg(Color::Green),
+            )));
             for f in &status.staged {
                 items.push(ListItem::new(format!("  + {f}")));
             }
         }
         if !status.unstaged.is_empty() {
-            items.push(ListItem::new(Span::styled("Modified:", Style::default().fg(Color::Yellow))));
+            items.push(ListItem::new(Span::styled(
+                "Modified:",
+                Style::default().fg(Color::Yellow),
+            )));
             for f in &status.unstaged {
                 items.push(ListItem::new(format!("  ~ {f}")));
             }
         }
         if !status.untracked.is_empty() {
-            items.push(ListItem::new(Span::styled("Untracked:", Style::default().fg(Color::Red))));
+            items.push(ListItem::new(Span::styled(
+                "Untracked:",
+                Style::default().fg(Color::Red),
+            )));
             for f in &status.untracked {
                 items.push(ListItem::new(format!("  ? {f}")));
             }

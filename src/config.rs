@@ -2,6 +2,8 @@ use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
+use crate::integrations::IntegrationConfig;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Config {
     #[serde(default = "default_notes_dir")]
@@ -26,6 +28,19 @@ pub struct Config {
     pub freshness: FreshnessConfig,
     #[serde(default)]
     pub kazam: KazamConfig,
+    /// Named Markdown vaults for desktop and terminal clients. An empty list
+    /// remains compatible with existing `notes_dir` configurations.
+    #[serde(default)]
+    pub vaults: Vec<VaultConfig>,
+    #[serde(default)]
+    pub integrations: IntegrationConfig,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VaultConfig {
+    pub id: String,
+    pub name: String,
+    pub path: PathBuf,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -208,18 +223,36 @@ pub struct UiConfig {
 
 // --- defaults ---
 
-fn default_kazam_import_folder() -> String { "kazam".into() }
-fn default_kazam_binary() -> String { "kazam".into() }
-fn default_watch_interval() -> u64 { 5 }
-fn default_api_port() -> u16 { 7373 }
-fn default_summarizer_url() -> String { "http://localhost:3000/api".into() }
-fn default_summarizer_model() -> String { "llama3.2".into() }
+fn default_kazam_import_folder() -> String {
+    "kazam".into()
+}
+fn default_kazam_binary() -> String {
+    "kazam".into()
+}
+fn default_watch_interval() -> u64 {
+    5
+}
+fn default_api_port() -> u16 {
+    7373
+}
+fn default_summarizer_url() -> String {
+    "http://localhost:3000/api".into()
+}
+fn default_summarizer_model() -> String {
+    "llama3.2".into()
+}
 fn default_summarizer_prompt() -> String {
     crate::llm::summarizer::DEFAULT_SYSTEM_PROMPT.to_string()
 }
-fn default_api_host() -> String { "127.0.0.1".into() }
-fn default_calls_folder() -> String { "calls".into() }
-fn default_call_tags() -> Vec<String> { vec!["call".into(), "meeting".into(), "meetily".into()] }
+fn default_api_host() -> String {
+    "127.0.0.1".into()
+}
+fn default_calls_folder() -> String {
+    "calls".into()
+}
+fn default_call_tags() -> Vec<String> {
+    vec!["call".into(), "meeting".into(), "meetily".into()]
+}
 
 fn default_notes_dir() -> PathBuf {
     dirs::home_dir()
@@ -227,20 +260,48 @@ fn default_notes_dir() -> PathBuf {
         .join("notes")
 }
 
-fn default_tab_width() -> u8 { 2 }
-fn default_true() -> bool { true }
-fn default_remote() -> String { "noterm: auto-save {timestamp}".into() }
-fn default_ollama_url() -> String { "http://localhost:11434".into() }
-fn default_chat_model() -> String { "llama3.2".into() }
-fn default_embed_model() -> String { "nomic-embed-text".into() }
-fn default_claude_model() -> String { "claude-sonnet-4-5".into() }
-fn default_openai_url() -> String { "https://api.openai.com/v1".into() }
-fn default_openai_model() -> String { "gpt-4o".into() }
-fn default_openai_embed_model() -> String { "text-embedding-3-small".into() }
-fn default_context_notes() -> usize { 5 }
-fn default_tree_width() -> u16 { 20 }
-fn default_chat_width() -> u16 { 35 }
-fn default_date_format() -> String { "%Y-%m-%d %H:%M".into() }
+fn default_tab_width() -> u8 {
+    2
+}
+fn default_true() -> bool {
+    true
+}
+fn default_remote() -> String {
+    "noterm: auto-save {timestamp}".into()
+}
+fn default_ollama_url() -> String {
+    "http://localhost:11434".into()
+}
+fn default_chat_model() -> String {
+    "llama3.2".into()
+}
+fn default_embed_model() -> String {
+    "nomic-embed-text".into()
+}
+fn default_claude_model() -> String {
+    "claude-sonnet-4-5".into()
+}
+fn default_openai_url() -> String {
+    "https://api.openai.com/v1".into()
+}
+fn default_openai_model() -> String {
+    "gpt-4o".into()
+}
+fn default_openai_embed_model() -> String {
+    "text-embedding-3-small".into()
+}
+fn default_context_notes() -> usize {
+    5
+}
+fn default_tree_width() -> u16 {
+    20
+}
+fn default_chat_width() -> u16 {
+    35
+}
+fn default_date_format() -> String {
+    "%Y-%m-%d %H:%M".into()
+}
 fn default_system_prompt() -> String {
     "You are a helpful assistant with access to the user's notes. \
      Answer questions based on the provided note context. \
@@ -249,11 +310,15 @@ fn default_system_prompt() -> String {
 }
 
 impl Default for LlmProvider {
-    fn default() -> Self { LlmProvider::Ollama }
+    fn default() -> Self {
+        LlmProvider::Ollama
+    }
 }
 
 impl Default for EmbedProvider {
-    fn default() -> Self { EmbedProvider::Ollama }
+    fn default() -> Self {
+        EmbedProvider::Ollama
+    }
 }
 
 impl std::fmt::Display for LlmProvider {
@@ -418,6 +483,8 @@ impl Default for Config {
             summarizer: SummarizerConfig::default(),
             freshness: FreshnessConfig::default(),
             kazam: KazamConfig::default(),
+            vaults: Vec::new(),
+            integrations: IntegrationConfig::default(),
         }
     }
 }
@@ -435,8 +502,7 @@ impl Config {
         let content = std::fs::read_to_string(&config_path)
             .with_context(|| format!("reading config from {}", config_path.display()))?;
 
-        let config: Config = toml::from_str(&content)
-            .with_context(|| "parsing config.toml")?;
+        let config: Config = toml::from_str(&content).with_context(|| "parsing config.toml")?;
 
         Ok(config)
     }
@@ -477,5 +543,44 @@ impl Config {
 
     pub fn log_path() -> PathBuf {
         Self::data_dir().join("noterm.log")
+    }
+
+    /// Return configured vaults, exposing a legacy `notes_dir` as the default
+    /// vault until a user explicitly configures multiple vaults.
+    pub fn resolved_vaults(&self) -> Vec<VaultConfig> {
+        if self.vaults.is_empty() {
+            vec![VaultConfig {
+                id: "default".into(),
+                name: "Default".into(),
+                path: self.notes_dir.clone(),
+            }]
+        } else {
+            self.vaults.clone()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn legacy_notes_directory_becomes_default_vault() {
+        let config = Config::default();
+        let vaults = config.resolved_vaults();
+        assert_eq!(vaults.len(), 1);
+        assert_eq!(vaults[0].id, "default");
+        assert_eq!(vaults[0].path, config.notes_dir);
+    }
+
+    #[test]
+    fn configured_vaults_replace_legacy_default() {
+        let mut config = Config::default();
+        config.vaults = vec![VaultConfig {
+            id: "work".into(),
+            name: "Work".into(),
+            path: PathBuf::from("/tmp/work-vault"),
+        }];
+        assert_eq!(config.resolved_vaults()[0].id, "work");
     }
 }

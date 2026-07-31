@@ -1,5 +1,9 @@
 # Rust build artifacts — never commit these (can be hundreds of MB)
 /target
+/src-tauri/target
+/src-tauri/gen
+/desktop/node_modules
+/desktop/dist
 
 # Local Claude Code settings (permissions, hooks)
 .claude/

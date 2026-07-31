@@ -2,12 +2,14 @@ use anyhow::Result;
 use rusqlite::Connection;
 
 pub fn run(conn: &Connection) -> Result<()> {
-    conn.execute_batch("
+    conn.execute_batch(
+        "
         CREATE TABLE IF NOT EXISTS schema_version (
             version    INTEGER NOT NULL PRIMARY KEY,
             applied_at INTEGER NOT NULL
         );
-    ")?;
+    ",
+    )?;
 
     let current_version: i64 = conn
         .query_row(
@@ -18,7 +20,8 @@ pub fn run(conn: &Connection) -> Result<()> {
         .unwrap_or(0);
 
     if current_version < 1 {
-        conn.execute_batch("
+        conn.execute_batch(
+            "
             CREATE TABLE IF NOT EXISTS embeddings (
                 note_id         TEXT NOT NULL PRIMARY KEY,
                 note_path       TEXT NOT NULL,
@@ -47,7 +50,8 @@ pub fn run(conn: &Connection) -> Result<()> {
 
             INSERT INTO schema_version (version, applied_at)
             VALUES (1, unixepoch());
-        ")?;
+        ",
+        )?;
     }
 
     Ok(())

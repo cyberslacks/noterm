@@ -98,13 +98,13 @@ fn render_title(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
 }
 
 fn render_prompt_overlay(f: &mut Frame, area: ratatui::layout::Rect, state: &AppState) {
+    use super::widgets::search_overlay::centered_rect;
     use ratatui::{
         layout::{Constraint, Direction, Layout},
         style::{Color, Style},
         text::{Line, Span},
         widgets::{Block, BorderType, Borders, Paragraph},
     };
-    use super::widgets::search_overlay::centered_rect;
 
     let popup = centered_rect(50, 15, area);
     f.render_widget(ratatui::widgets::Clear, popup);
