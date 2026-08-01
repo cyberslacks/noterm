@@ -1,6 +1,6 @@
 [package]
 name = "noterm"
-version = "0.3.0"
+version = "0.5.0"
 edition = "2021"
 description = "Terminal-native Markdown note-taking with LLM, search, git, and kanban"
 
