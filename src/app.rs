@@ -390,6 +390,7 @@ pub struct AppState {
     pub available_openai_models: Vec<String>,
     pub settings_prompt_editor: TextArea<'static>,
     pub settings_vaults_editor: TextArea<'static>,
+    pub session: crate::session::SessionState,
 
     // Summarize panel
     pub summarize_loading: bool,
@@ -459,6 +460,7 @@ impl AppState {
             available_openai_models: Vec::new(),
             settings_prompt_editor: TextArea::default(),
             settings_vaults_editor: TextArea::default(),
+            session: crate::session::SessionState::load(),
             summarize_loading: false,
             summarize_buf: String::new(),
             summarize_scroll: 0,
@@ -838,6 +840,17 @@ impl AppState {
         self.editor = TextArea::new(lines);
         self.viewer_scroll = 0;
         self.is_modified = false;
+        if let Some(vault) = self
+            .config
+            .resolved_vaults()
+            .into_iter()
+            .find(|vault| vault.path == self.notes_dir)
+        {
+            self.session
+                .last_note_by_vault
+                .insert(vault.id, note.relative_path.clone());
+            self.session.save();
+        }
         self.current_note = Some(note);
     }
 

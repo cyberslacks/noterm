@@ -21,7 +21,17 @@ async fn main() -> Result<()> {
     }
 
     // Load config first (creates default if missing)
-    let config = Config::load()?;
+    let mut config = Config::load()?;
+    let session = noterm::session::SessionState::load();
+    if let Some(id) = session.active_vault_id.as_deref() {
+        if let Some(vault) = config
+            .resolved_vaults()
+            .into_iter()
+            .find(|vault| vault.id == id)
+        {
+            config.notes_dir = vault.path;
+        }
+    }
 
     // Ensure the standard portable Markdown-vault layout exists.
     config.ensure_vault_layout()?;
@@ -35,6 +45,7 @@ async fn main() -> Result<()> {
 
     // Create app state
     let mut app = AppState::new(config, tx.clone());
+    app.session = session;
 
     // Initial file tree scan
     {

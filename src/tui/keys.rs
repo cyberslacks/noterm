@@ -409,6 +409,8 @@ fn handle_vault_picker(state: &mut AppState, key: KeyEvent) -> Result<Action> {
         }
         KeyCode::Enter => {
             if let Some(vault) = vaults.get(selected).cloned() {
+                state.session.active_vault_id = Some(vault.id.clone());
+                state.session.save();
                 state.tx.send(AppEvent::VaultSelected(vault)).ok();
                 state.mode = Mode::Normal;
             }

@@ -14,6 +14,7 @@ pub mod kazam;
 pub mod llm;
 pub mod notes;
 pub mod search;
+pub mod session;
 pub mod sync;
 pub mod tasks;
 pub mod tui;
